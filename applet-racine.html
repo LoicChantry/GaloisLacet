@@ -1,0 +1,978 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Suivi continu de la racine k-ième</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --board: #16231c;
+    --board-2: #1b2b21;
+    --board-3: #203627;
+    --chalk: #EDEAE0;
+    --chalk-dim: #9FB0A6;
+    --chalk-faint: #6d7d73;
+    --grid: rgba(159,176,166,0.16);
+    --path: #A9B6AD;
+    --accent: #E8C468;
+    --error: #D97B6C;
+    --line: rgba(237,234,224,0.12);
+    --radius: 3px;
+  }
+
+  *{ box-sizing:border-box; }
+
+  html,body{
+    margin:0; padding:0;
+    background: var(--board);
+    color: var(--chalk);
+    font-family:'IBM Plex Mono', ui-monospace, Consolas, monospace;
+  }
+
+  body{
+    min-height:100vh;
+    background-image:
+      radial-gradient(ellipse at 20% 10%, rgba(237,234,224,0.035), transparent 60%),
+      radial-gradient(ellipse at 85% 90%, rgba(237,234,224,0.03), transparent 55%);
+  }
+
+  .wrap{
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 36px 24px 56px;
+  }
+
+  header{
+    margin-bottom: 28px;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 20px;
+  }
+
+  h1{
+    font-family:'Fraunces', Georgia, serif;
+    font-weight: 600;
+    font-optical-sizing: auto;
+    font-size: clamp(1.5rem, 2.4vw, 2.05rem);
+    margin: 0 0 8px;
+    letter-spacing: -0.01em;
+    color: var(--chalk);
+  }
+  h1 .accent-word{ color: var(--accent); font-style: italic; font-weight: 500; }
+
+  header p{
+    margin: 0;
+    color: var(--chalk-dim);
+    font-size: 0.92rem;
+    line-height: 1.55;
+    max-width: 100%;
+  }
+
+  .layout{
+    display: grid;
+    grid-template-columns: minmax(0,1fr) minmax(0,1fr);
+    gap: 22px;
+    align-items: start;
+  }
+
+  @media (max-width: 820px){
+    .layout{ grid-template-columns: 1fr; }
+  }
+
+  .panel{
+    background: var(--board-2);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 18px 18px 20px;
+  }
+
+  .panel-title{
+    font-family:'Fraunces', Georgia, serif;
+    font-size: 0.98rem;
+    font-weight: 600;
+    color: var(--chalk);
+    margin: 0 0 4px;
+    display:flex; align-items:center; gap:8px;
+  }
+  .panel-sub{
+    font-size: 0.74rem;
+    color: var(--chalk-faint);
+    margin: 0 0 16px;
+    line-height:1.5;
+  }
+
+  /* --- k stepper --- */
+  .k-row{
+    display:flex; align-items:center; gap:14px;
+    margin-bottom: 16px;
+  }
+  .k-stepper{
+    display:flex; align-items:center;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    overflow:hidden;
+  }
+  .k-stepper button{
+    background: var(--board-3);
+    border: none;
+    color: var(--chalk);
+    width: 30px; height: 30px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background .15s ease;
+  }
+  .k-stepper button:hover{ background:#2a4433; }
+  .k-stepper button:disabled{ opacity:.3; cursor:not-allowed; }
+  .k-stepper .k-val{
+    width: 44px; text-align:center;
+    font-size: 1rem; font-weight:600;
+    letter-spacing: 0.02em;
+  }
+  .k-label{
+    font-size: 0.74rem; color: var(--chalk-dim);
+    line-height:1.4;
+  }
+  .k-label b{ color: var(--chalk); font-weight:600; }
+
+  /* --- ring legend --- */
+  .ring-box{
+    display:flex; align-items:center; gap:16px;
+    margin-bottom: 18px;
+    padding: 10px 4px 14px;
+    border-bottom: 1px dashed var(--line);
+  }
+  .ring{
+    position:relative;
+    width: 76px; height:76px;
+    flex: 0 0 auto;
+  }
+  .ring::before{
+    content:"";
+    position:absolute; inset:0;
+    border-radius:50%;
+    border: 1px dashed var(--chalk-faint);
+    opacity:.55;
+  }
+  .ring-dot{
+    position:absolute;
+    width:11px; height:11px;
+    border-radius:50%;
+    top:50%; left:50%;
+    margin:-5.5px 0 0 -5.5px;
+    box-shadow: 0 0 0 2px rgba(22,35,28,0.9);
+  }
+  .ring-caption{
+    font-size: 0.7rem;
+    color: var(--chalk-faint);
+    line-height:1.5;
+  }
+  .ring-caption code{ color: var(--chalk-dim); }
+
+  /* --- roots plane --- */
+  #rootsCanvas{
+    display:block;
+    width:100%;
+    aspect-ratio: 1 / 1;
+    background: var(--board);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    margin-bottom: 14px;
+  }
+
+  .roots-list{
+    list-style:none; margin:0; padding:0;
+    display:flex; flex-direction:column; gap:6px;
+  }
+  .roots-list li{
+    display:flex; align-items:center; gap:9px;
+    font-size: 0.78rem;
+    color: var(--chalk-dim);
+  }
+  .dot{
+    width:9px; height:9px; border-radius:50%;
+    flex: 0 0 auto;
+  }
+  .roots-list .val{ color: var(--chalk); }
+  .roots-list .ghost-note{ color: var(--chalk-faint); font-size:0.68rem; }
+
+  /* --- right panel --- */
+  .toolbar{
+    display:flex; align-items:center; gap:10px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+  }
+  button.btn{
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: var(--chalk);
+    background: var(--board-3);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 9px 14px;
+    cursor: pointer;
+    transition: background .15s ease, border-color .15s ease, opacity .15s ease;
+    letter-spacing: 0.01em;
+  }
+  button.btn:hover:not(:disabled){ background:#2a4433; border-color: var(--chalk-faint); }
+  button.btn:disabled{ opacity:.35; cursor:not-allowed; }
+  button.btn.primary{
+    background: #35543f;
+    border-color:#3f6b4a;
+  }
+  button.btn.primary:hover:not(:disabled){ background:#3d6248; }
+
+  button.btn:focus-visible, .k-stepper button:focus-visible, input:focus-visible, label.checkbox:focus-within{
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  .toolbar .spacer{ flex: 1 1 auto; }
+
+  label.checkbox{
+    display:flex; align-items:center; gap:7px;
+    font-size: 0.76rem;
+    color: var(--chalk-dim);
+    cursor:pointer;
+    user-select:none;
+  }
+  label.checkbox input{ accent-color: var(--accent); width:14px; height:14px; }
+
+  #zCanvas{
+    display:block;
+    width:100%;
+    aspect-ratio: 1 / 1;
+    background: var(--board);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    cursor: crosshair;
+  }
+
+  .scrub-row{
+    display:flex; align-items:center; gap:12px;
+    margin-top: 14px;
+  }
+  .scrub-row input[type=range]{
+    flex:1;
+    accent-color: var(--accent);
+  }
+  .t-readout{
+    font-size: 0.76rem;
+    color: var(--chalk-dim);
+    width: 92px;
+    text-align:right;
+  }
+
+  .status{
+    min-height: 1.3em;
+    font-size: 0.78rem;
+    margin-top: 10px;
+  }
+  .status.error{ color: var(--error); }
+  .status.info{ color: var(--chalk-faint); }
+  .status.ok{ color: #8fbf9a; }
+
+  .hint{
+    font-size: 0.72rem;
+    color: var(--chalk-faint);
+    margin-top: 8px;
+    line-height:1.5;
+  }
+
+  footer{
+    margin-top: 30px;
+    padding-top: 16px;
+    border-top: 1px solid var(--line);
+    font-size: 0.72rem;
+    color: var(--chalk-faint);
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>Suivi continu de la racine <span class="accent-word">k</span>-ième</h1>
+    <p>
+      Tracez un chemin γ dans le plan de départ (à droite), en évitant 0. En lecture, chaque
+      détermination de la racine k-ième de γ(t) est suivie continûment — sans jamais recalculer
+      via une coupure — et s'affiche à gauche, une couleur par détermination, réparties
+      cycliquement comme les racines k-ièmes de l'unité.
+    </p>
+  </header>
+
+  <div class="layout">
+
+    <!-- ============ PANNEAU GAUCHE ============ -->
+    <section class="panel">
+      <p class="panel-title">Plan de γ</p>
+      <p class="panel-sub">Point noir = γ(0), déplaçable en le glissant. Cliquez ailleurs pour prolonger le chemin (en gris).</p>
+
+      <div class="toolbar">
+        <button class="btn" id="undoBtn" type="button">← Retour</button>
+        <button class="btn" id="clearBtn" type="button">Effacer</button>
+        <label class="checkbox">
+          <input type="checkbox" id="loopChk">
+          Refermer en lacet
+        </label>
+        <span class="spacer"></span>
+        <button class="btn primary" id="playBtn" type="button" disabled>▶ Lecture</button>
+      </div>
+
+      <canvas id="zCanvas" width="480" height="480"></canvas>
+
+      <div class="scrub-row">
+        <input type="range" id="scrub" min="0" max="1" step="0.001" value="0" disabled>
+        <span class="t-readout" id="tReadout">t = 0.000</span>
+      </div>
+
+      <p class="status info" id="status">Cliquez dans le plan pour commencer à tracer γ.</p>
+      <p class="hint" id="indexHint"></p>
+    </section>
+
+    <!-- ============ PANNEAU DROIT ============ -->
+    <section class="panel">
+      <p class="panel-title">Racines k-ièmes</p>
+      <p class="panel-sub">Plan des valeurs w telles que w<sup>k</sup> = γ(t).</p>
+
+      <div class="k-row">
+        <div class="k-stepper">
+          <button id="kMinus" type="button" aria-label="Diminuer k">−</button>
+          <span class="k-val" id="kVal">2</span>
+          <button id="kPlus" type="button" aria-label="Augmenter k">+</button>
+        </div>
+        <div class="k-label">ordre du radical<br><b id="kSqrtLabel">racine 2-ième</b></div>
+      </div>
+
+      <div class="ring-box">
+        <div class="ring" id="ring"></div>
+        <p class="ring-caption">
+          Chaque détermination j = 0,…,k−1 occupe un secteur de <code>360°/k</code> —
+          l'ordre cyclique de ζ<sub>k</sub>.
+        </p>
+      </div>
+
+      <canvas id="rootsCanvas" width="480" height="480"></canvas>
+
+      <ul class="roots-list" id="rootsList"></ul>
+    </section>
+
+  </div>
+
+  <footer>
+    Instrument pédagogique associé à la construction du redressement continu (§ racine k-ième
+    le long d'un chemin). Fonctionne hors-ligne — ce fichier est autonome.
+  </footer>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ============================================================
+     ÉTAT GLOBAL
+     ============================================================ */
+  const state = {
+    k: 2,
+    points: [{re: 2.0, im: 0.0}],   // points[0] = point de départ noir, fixe
+    playing: false,
+    t: 0,
+    sample: null,        // {re[], im[]} du chemin échantillonné
+    theta: null,          // argument déroulé, même longueur que sample
+    rho: null,
+    valid: false,          // false si le chemin passe par 0
+    rootsBounds: null,     // {minRe,maxRe,minIm,maxIm} pour l'autoscale du plan des racines
+    branchPaths: null,      // trajectoires précalculées des k déterminations
+    draggingStart: false,
+    animStart: 0,
+  };
+
+  const EPS_ZERO = 0.16;      // rayon (unités complexes) de la zone interdite autour de 0
+  const N_SAMPLES = 1600;
+  const DURATION_MS = 7000;
+
+  const reducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* ============================================================
+     UTILITAIRES MATHÉMATIQUES
+     ============================================================ */
+
+  // Conversion Catmull-Rom -> points de contrôle Bézier cubique pour le segment p1->p2
+  function catmullToBezier(p0,p1,p2,p3){
+    return {
+      c1: { re: p1.re + (p2.re-p0.re)/6, im: p1.im + (p2.im-p0.im)/6 },
+      c2: { re: p2.re - (p3.re-p1.re)/6, im: p2.im - (p3.im-p1.im)/6 }
+    };
+  }
+
+  function cubicBezierAt(p1,c1,c2,p2,u){
+    const mu = 1-u;
+    const a = mu*mu*mu, b = 3*mu*mu*u, c = 3*mu*u*u, d = u*u*u;
+    return {
+      re: a*p1.re + b*c1.re + c*c2.re + d*p2.re,
+      im: a*p1.im + b*c1.im + c*c2.im + d*p2.im
+    };
+  }
+
+  // Échantillonne uniformément (en t) la spline passant par pts[]
+  function sampleSpline(pts, n){
+    const segN = pts.length - 1;
+    const out = { re: new Float64Array(n), im: new Float64Array(n) };
+    if (segN <= 0){
+      for(let i=0;i<n;i++){ out.re[i]=pts[0].re; out.im[i]=pts[0].im; }
+      return out;
+    }
+    for (let i=0;i<n;i++){
+      const t = i/(n-1);
+      let segT = t*segN;
+      let seg = Math.floor(segT);
+      if (seg >= segN) seg = segN-1;
+      const u = segT - seg;
+      const p0 = pts[seg-1] || pts[seg];
+      const p1 = pts[seg];
+      const p2 = pts[seg+1];
+      const p3 = pts[seg+2] || pts[seg+1];
+      const {c1,c2} = catmullToBezier(p0,p1,p2,p3);
+      const pt = cubicBezierAt(p1,c1,c2,p2,u);
+      out.re[i]=pt.re; out.im[i]=pt.im;
+    }
+    return out;
+  }
+
+  function unwrap(re, im){
+    const n = re.length;
+    const theta = new Float64Array(n);
+    const rho = new Float64Array(n);
+    rho[0] = Math.hypot(re[0], im[0]);
+    theta[0] = Math.atan2(im[0], re[0]);
+    let prevAngle = theta[0];
+    for (let i=1;i<n;i++){
+      rho[i] = Math.hypot(re[i], im[i]);
+      const raw = Math.atan2(im[i], re[i]);
+      let d = raw - Math.atan2(im[i-1], re[i-1]);
+      while (d > Math.PI) d -= 2*Math.PI;
+      while (d <= -Math.PI) d += 2*Math.PI;
+      theta[i] = theta[i-1] + d;
+      prevAngle = raw;
+    }
+    return {theta, rho};
+  }
+
+  function minDistToZero(re, im){
+    let m = Infinity;
+    for (let i=0;i<re.length;i++){
+      const d = Math.hypot(re[i], im[i]);
+      if (d < m) m = d;
+    }
+    return m;
+  }
+
+  function hueForBranch(j,k){ return Math.round(j*360/k); }
+  function colorForBranch(j,k, alpha){
+    const h = hueForBranch(j,k);
+    if (alpha === undefined) alpha = 1;
+    return `hsla(${h}, 62%, 66%, ${alpha})`;
+  }
+
+  function fmtComplex(re, im){
+    const a = (Math.abs(re) < 0.005 ? 0 : re).toFixed(2);
+    const b = Math.abs(im);
+    const sign = im < -0.0049 ? '−' : '+';
+    return `${a} ${sign} ${b.toFixed(2)}i`;
+  }
+
+  /* ============================================================
+     CANVAS : PLAN DE γ (droite)
+     ============================================================ */
+  const zCanvas = document.getElementById('zCanvas');
+  const zCtx = zCanvas.getContext('2d');
+  const Z_RANGE = 4.4;   // demi-étendue affichée, unités complexes
+  let zCssSize = 480;
+
+  function setupCanvasDPR(canvas, cssSize){
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = cssSize*dpr;
+    canvas.height = cssSize*dpr;
+    canvas.style.width = cssSize+'px';
+    canvas.style.height = cssSize+'px';
+    const ctx = canvas.getContext('2d');
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    return ctx;
+  }
+
+  function zToPx(re, im){
+    const s = zCssSize / (2*Z_RANGE);
+    return { x: zCssSize/2 + re*s, y: zCssSize/2 - im*s };
+  }
+  function pxToZ(x,y){
+    const s = zCssSize / (2*Z_RANGE);
+    return { re: (x - zCssSize/2)/s, im: (zCssSize/2 - y)/s };
+  }
+
+  function drawGrid(ctx, cssSize, range, toPx){
+    ctx.clearRect(0,0,cssSize,cssSize);
+    ctx.strokeStyle = 'rgba(159,176,166,0.16)';
+    ctx.lineWidth = 1;
+    const step = range > 3 ? 1 : (range > 1.2 ? 0.5 : 0.2);
+    for (let g = -Math.ceil(range); g<=Math.ceil(range); g += step){
+      const p1 = toPx(g, -range), p2 = toPx(g, range);
+      ctx.beginPath(); ctx.moveTo(p1.x+0.5,p1.y); ctx.lineTo(p2.x+0.5,p2.y); ctx.stroke();
+      const p3 = toPx(-range, g), p4 = toPx(range, g);
+      ctx.beginPath(); ctx.moveTo(p3.x,p3.y+0.5); ctx.lineTo(p4.x,p4.y+0.5); ctx.stroke();
+    }
+    // axes
+    ctx.strokeStyle = 'rgba(237,234,224,0.32)';
+    ctx.lineWidth = 1.2;
+    const o1 = toPx(-range,0), o2 = toPx(range,0);
+    ctx.beginPath(); ctx.moveTo(o1.x,o1.y); ctx.lineTo(o2.x,o2.y); ctx.stroke();
+    const o3 = toPx(0,-range), o4 = toPx(0,range);
+    ctx.beginPath(); ctx.moveTo(o3.x,o3.y); ctx.lineTo(o4.x,o4.y); ctx.stroke();
+  }
+
+  function drawForbiddenZone(ctx, toPx, color){
+    const c = toPx(0,0);
+    const rPx = toPx(EPS_ZERO,0).x - toPx(0,0).x;
+    ctx.save();
+    ctx.setLineDash([3,4]);
+    ctx.strokeStyle = color;
+    ctx.globalAlpha = 0.7;
+    ctx.lineWidth = 1.3;
+    ctx.beginPath();
+    ctx.arc(c.x, c.y, Math.abs(rPx), 0, Math.PI*2);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function redrawZPlane(){
+    drawGrid(zCtx, zCssSize, Z_RANGE, zToPx);
+    drawForbiddenZone(zCtx, zToPx, state.valid===false ? '#D97B6C' : '#E8C468');
+
+    // origine
+    const o = zToPx(0,0);
+    zCtx.fillStyle = '#E8C468';
+    zCtx.beginPath(); zCtx.arc(o.x,o.y,2.4,0,Math.PI*2); zCtx.fill();
+
+    // chemin (spline complète), coloré selon validité
+    if (state.points.length >= 2 && state.sample){
+      zCtx.strokeStyle = state.valid ? '#A9B6AD' : '#D97B6C';
+      zCtx.lineWidth = 2;
+      zCtx.beginPath();
+      const first = zToPx(state.sample.re[0], state.sample.im[0]);
+      zCtx.moveTo(first.x, first.y);
+      for (let i=1;i<state.sample.re.length;i++){
+        const p = zToPx(state.sample.re[i], state.sample.im[i]);
+        zCtx.lineTo(p.x,p.y);
+      }
+      zCtx.stroke();
+    }
+
+    // points cliqués (hors point 0)
+    zCtx.fillStyle = '#9FB0A6';
+    for (let i=1;i<state.points.length;i++){
+      const p = zToPx(state.points[i].re, state.points[i].im);
+      zCtx.beginPath(); zCtx.arc(p.x,p.y,3.2,0,Math.PI*2); zCtx.fill();
+    }
+
+    // point de départ (noir, cerclé de craie)
+    const start = zToPx(state.points[0].re, state.points[0].im);
+    zCtx.fillStyle = '#0c1510';
+    zCtx.strokeStyle = '#EDEAE0';
+    zCtx.lineWidth = 1.6;
+    zCtx.beginPath(); zCtx.arc(start.x,start.y,5.5,0,Math.PI*2); zCtx.fill(); zCtx.stroke();
+
+    // marqueur de progression γ(t)
+    if (state.valid && state.sample){
+      const idx = Math.min(state.sample.re.length-1, Math.round(state.t*(state.sample.re.length-1)));
+      const p = zToPx(state.sample.re[idx], state.sample.im[idx]);
+      zCtx.fillStyle = '#E8C468';
+      zCtx.beginPath(); zCtx.arc(p.x,p.y,4.6,0,Math.PI*2); zCtx.fill();
+    }
+  }
+
+  /* ============================================================
+     CANVAS : PLAN DES RACINES (gauche)
+     ============================================================ */
+  const rootsCanvas = document.getElementById('rootsCanvas');
+  let rootsCssSize = 300;
+  const rootsCtx0 = rootsCanvas.getContext('2d');
+
+  function rootsToPx(re, im){
+    const b = state.rootsBounds;
+    if (!b) return {x: rootsCssSize/2, y: rootsCssSize/2};
+    const w = Math.max(b.maxRe-b.minRe, 0.001);
+    const h = Math.max(b.maxIm-b.minIm, 0.001);
+    const range = Math.max(w,h)/2 * 1.25 + 0.15;
+    const cx = (b.minRe+b.maxRe)/2, cy = (b.minIm+b.maxIm)/2;
+    const s = rootsCssSize/(2*range);
+    return { x: rootsCssSize/2 + (re-cx)*s, y: rootsCssSize/2 - (im-cy)*s };
+  }
+  function rootsRangeVal(){
+    const b = state.rootsBounds;
+    if (!b) return 1;
+    const w = Math.max(b.maxRe-b.minRe, 0.001);
+    const h = Math.max(b.maxIm-b.minIm, 0.001);
+    return Math.max(w,h)/2 * 1.25 + 0.15;
+  }
+
+  function redrawRootsPlane(){
+    const ctx = rootsCanvas.getContext('2d');
+    drawGrid(ctx, rootsCssSize, rootsRangeVal(), rootsToPx);
+
+    const listEl = document.getElementById('rootsList');
+    listEl.innerHTML = '';
+
+    if (!state.valid || !state.sample){
+      const o = rootsToPx(0,0);
+      ctx.fillStyle = '#E8C468';
+      ctx.beginPath(); ctx.arc(o.x,o.y,2.2,0,Math.PI*2); ctx.fill();
+      return;
+    }
+
+    const k = state.k;
+    const n = state.theta.length;
+    const idx = Math.min(n-1, Math.round(state.t*(n-1)));
+    const stride = Math.max(1, Math.floor(idx/400));
+
+    for (let j=0;j<k;j++){
+      const path = state.branchPaths[j];
+
+      // valeur fantôme (t=0)
+      const gp = rootsToPx(path.re[0], path.im[0]);
+      ctx.strokeStyle = colorForBranch(j,k,0.6);
+      ctx.lineWidth = 1.4;
+      ctx.beginPath(); ctx.arc(gp.x,gp.y,5,0,Math.PI*2); ctx.stroke();
+
+      // tracé cumulatif, de 0 à l'instant courant : reste affiché en se prolongeant
+      if (idx > 0){
+        ctx.strokeStyle = colorForBranch(j,k,0.55);
+        ctx.lineWidth = 1.7;
+        ctx.beginPath();
+        let p0 = rootsToPx(path.re[0], path.im[0]);
+        ctx.moveTo(p0.x,p0.y);
+        for (let s = stride; s<idx; s+=stride){
+          const p = rootsToPx(path.re[s], path.im[s]);
+          ctx.lineTo(p.x,p.y);
+        }
+        const pEnd = rootsToPx(path.re[idx], path.im[idx]);
+        ctx.lineTo(pEnd.x,pEnd.y);
+        ctx.stroke();
+      }
+
+      // valeur courante
+      const cp = rootsToPx(path.re[idx], path.im[idx]);
+      ctx.fillStyle = colorForBranch(j,k,1);
+      ctx.beginPath(); ctx.arc(cp.x,cp.y,5.4,0,Math.PI*2); ctx.fill();
+
+      // liste
+      const li = document.createElement('li');
+      const dot = document.createElement('span');
+      dot.className = 'dot';
+      dot.style.background = colorForBranch(j,k,1);
+      const val = document.createElement('span');
+      val.className = 'val';
+      val.textContent = `w${subscript(j)} = ${fmtComplex(path.re[idx],path.im[idx])}`;
+      li.appendChild(dot); li.appendChild(val);
+      listEl.appendChild(li);
+    }
+  }
+
+  function subscript(j){
+    const map = ['₀','₁','₂','₃','₄','₅','₆','₇','₈','₉'];
+    return String(j).split('').map(d=>map[+d]).join('');
+  }
+
+  function computeBranchPaths(theta, rho, k){
+    const n = theta.length;
+    const paths = [];
+    for (let j=0;j<k;j++){
+      const re = new Float64Array(n), im = new Float64Array(n);
+      for (let i=0;i<n;i++){
+        const r = Math.pow(rho[i], 1/k);
+        const ang = (theta[i] + 2*Math.PI*j)/k;
+        re[i] = r*Math.cos(ang);
+        im[i] = r*Math.sin(ang);
+      }
+      paths.push({re, im});
+    }
+    return paths;
+  }
+
+  /* ============================================================
+     RING LEGEND
+     ============================================================ */
+  function rebuildRing(){
+    const ring = document.getElementById('ring');
+    ring.innerHTML = '';
+    const R = 30;
+    for (let j=0;j<state.k;j++){
+      const angle = (j/state.k)*2*Math.PI - Math.PI/2;
+      const dot = document.createElement('div');
+      dot.className = 'ring-dot';
+      dot.style.background = colorForBranch(j,state.k,1);
+      dot.style.transform = `translate(${Math.cos(angle)*R}px, ${Math.sin(angle)*R}px)`;
+      dot.title = `détermination j=${j}`;
+      ring.appendChild(dot);
+    }
+  }
+
+  /* ============================================================
+     RECALCUL DU CHEMIN
+     ============================================================ */
+  function recompute(){
+    stopPlayback();
+    state.t = 0;
+    document.getElementById('scrub').value = 0;
+    document.getElementById('tReadout').textContent = 't = 0.000';
+
+    if (state.points.length < 2){
+      state.sample = null; state.valid = false; state.rootsBounds = null; state.branchPaths = null;
+      document.getElementById('playBtn').disabled = true;
+      document.getElementById('scrub').disabled = true;
+      setStatus('Cliquez dans le plan pour commencer à tracer γ.', 'info');
+      document.getElementById('indexHint').textContent = '';
+      redrawZPlane(); redrawRootsPlane();
+      return;
+    }
+
+    let pts = state.points;
+    if (document.getElementById('loopChk').checked && pts.length >= 2){
+      const last = pts[pts.length-1];
+      const dStart = Math.hypot(last.re-pts[0].re, last.im-pts[0].im);
+      if (dStart > 1e-6) pts = pts.concat([pts[0]]);
+    }
+
+    state.sample = sampleSpline(pts, N_SAMPLES);
+    const dMin = minDistToZero(state.sample.re, state.sample.im);
+    state.valid = dMin >= EPS_ZERO;
+
+    if (!state.valid){
+      state.theta = null; state.rho = null; state.rootsBounds = null; state.branchPaths = null;
+      document.getElementById('playBtn').disabled = true;
+      document.getElementById('scrub').disabled = true;
+      setStatus('Le chemin passe trop près de 0 — impossible d\'y suivre une racine. Ajustez le tracé ou faites « Retour ».', 'error');
+      document.getElementById('indexHint').textContent = '';
+      redrawZPlane(); redrawRootsPlane();
+      return;
+    }
+
+    const u = unwrap(state.sample.re, state.sample.im);
+    state.theta = u.theta; state.rho = u.rho;
+    state.branchPaths = computeBranchPaths(state.theta, state.rho, state.k);
+
+    // bornes pour l'autoscale du plan des racines (sur toutes les branches, tout t)
+    let minRe=Infinity,maxRe=-Infinity,minIm=Infinity,maxIm=-Infinity;
+    const n = state.theta.length;
+    for (let j=0;j<state.k;j++){
+      const path = state.branchPaths[j];
+      for (let i=0;i<n;i+=4){
+        if (path.re[i]<minRe) minRe=path.re[i]; if (path.re[i]>maxRe) maxRe=path.re[i];
+        if (path.im[i]<minIm) minIm=path.im[i]; if (path.im[i]>maxIm) maxIm=path.im[i];
+      }
+    }
+    state.rootsBounds = {minRe,maxRe,minIm,maxIm};
+
+    document.getElementById('playBtn').disabled = false;
+    document.getElementById('scrub').disabled = false;
+    setStatus('Chemin valide. Cliquez « Lecture » pour suivre les racines.', 'ok');
+
+    // indice, si le chemin est refermé
+    const closedNow = document.getElementById('loopChk').checked;
+    if (closedNow){
+      const ind = Math.round((state.theta[n-1]-state.theta[0])/(2*Math.PI));
+      const kDividesInd = ind % state.k === 0;
+      document.getElementById('indexHint').textContent =
+        `indice ind(γ) = ${ind}  →  w${subscript(0)}(1) = ζ${superscriptExp(ind)}·w${subscript(0)}(0)` +
+        (kDividesInd ? `  (multiple de k : chaque branche se referme)` : `  (non multiple de k : les branches se permutent)`);
+    } else {
+      document.getElementById('indexHint').textContent = '';
+    }
+
+    redrawZPlane(); redrawRootsPlane();
+  }
+
+  function superscriptExp(n){
+    const map = {'0':'⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹','-':'⁻'};
+    return String(n).split('').map(c=>map[c]||c).join('');
+  }
+
+  function setStatus(msg, kind){
+    const el = document.getElementById('status');
+    el.textContent = msg;
+    el.className = 'status ' + (kind||'info');
+  }
+
+  /* ============================================================
+     LECTURE / SCRUB
+     ============================================================ */
+  let rafId = null;
+
+  function stopPlayback(){
+    state.playing = false;
+    if (rafId){ cancelAnimationFrame(rafId); rafId = null; }
+    document.getElementById('playBtn').textContent = '▶ Lecture';
+  }
+
+  function startPlayback(){
+    if (!state.valid) return;
+    if (reducedMotion){
+      state.t = 1;
+      document.getElementById('scrub').value = 1;
+      document.getElementById('tReadout').textContent = 't = 1.000';
+      redrawZPlane(); redrawRootsPlane();
+      return;
+    }
+    state.playing = true;
+    document.getElementById('playBtn').textContent = '⏸ Pause';
+    state.animStart = performance.now() - state.t*DURATION_MS;
+    const step = (now)=>{
+      if (!state.playing) return;
+      let elapsed = now - state.animStart;
+      let t = elapsed / DURATION_MS;
+      if (t >= 1){ t = 1; state.t = 1; updateFrame(); stopPlayback(); return; }
+      state.t = t;
+      updateFrame();
+      rafId = requestAnimationFrame(step);
+    };
+    rafId = requestAnimationFrame(step);
+  }
+
+  function updateFrame(){
+    document.getElementById('scrub').value = state.t;
+    document.getElementById('tReadout').textContent = 't = ' + state.t.toFixed(3);
+    redrawZPlane();
+    redrawRootsPlane();
+  }
+
+  document.getElementById('playBtn').addEventListener('click', ()=>{
+    if (state.playing) stopPlayback();
+    else {
+      if (state.t >= 1) state.t = 0;
+      startPlayback();
+    }
+  });
+
+  document.getElementById('scrub').addEventListener('input', (e)=>{
+    stopPlayback();
+    state.t = parseFloat(e.target.value);
+    updateFrame();
+  });
+
+  /* ============================================================
+     INTERACTIONS : clic pour tracer, glisser le point de départ, k, effacer, retour
+     ============================================================ */
+  const START_GRAB_RADIUS_PX = 12;
+  let justDraggedStart = false;
+  let dragRAF = null;
+
+  function localXY(e){
+    const rect = zCanvas.getBoundingClientRect();
+    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+  }
+  function distPx(a,b){ return Math.hypot(a.x-b.x, a.y-b.y); }
+
+  zCanvas.addEventListener('pointerdown', (e)=>{
+    const xy = localXY(e);
+    const startPx = zToPx(state.points[0].re, state.points[0].im);
+    if (distPx(xy, startPx) <= START_GRAB_RADIUS_PX){
+      state.draggingStart = true;
+      zCanvas.style.cursor = 'grabbing';
+      zCanvas.setPointerCapture(e.pointerId);
+      e.preventDefault();
+    }
+  });
+
+  zCanvas.addEventListener('pointermove', (e)=>{
+    const xy = localXY(e);
+    if (state.draggingStart){
+      state.points[0] = pxToZ(xy.x, xy.y);
+      if (!dragRAF){
+        dragRAF = requestAnimationFrame(()=>{ dragRAF = null; recompute(); });
+      }
+      return;
+    }
+    // survol : indiquer que le point de départ peut être saisi
+    const startPx = zToPx(state.points[0].re, state.points[0].im);
+    zCanvas.style.cursor = (distPx(xy, startPx) <= START_GRAB_RADIUS_PX) ? 'grab' : 'crosshair';
+  });
+
+  function endDragStart(e){
+    if (state.draggingStart){
+      state.draggingStart = false;
+      justDraggedStart = true;
+      zCanvas.style.cursor = 'crosshair';
+      if (e && e.pointerId !== undefined) zCanvas.releasePointerCapture(e.pointerId);
+      if (dragRAF){ cancelAnimationFrame(dragRAF); dragRAF = null; }
+      recompute();
+    }
+  }
+  zCanvas.addEventListener('pointerup', endDragStart);
+  zCanvas.addEventListener('pointercancel', endDragStart);
+
+  zCanvas.addEventListener('click', (e)=>{
+    if (justDraggedStart){ justDraggedStart = false; return; }
+    const xy = localXY(e);
+    const startPx = zToPx(state.points[0].re, state.points[0].im);
+    if (distPx(xy, startPx) <= START_GRAB_RADIUS_PX) return; // clic sur le point de départ : rien à ajouter
+    const z = pxToZ(xy.x, xy.y);
+    state.points.push(z);
+    recompute();
+  });
+
+  document.getElementById('undoBtn').addEventListener('click', ()=>{
+    if (state.points.length > 1){
+      state.points.pop();
+      recompute();
+    }
+  });
+
+  document.getElementById('clearBtn').addEventListener('click', ()=>{
+    state.points = [{re:2.0, im:0.0}];
+    document.getElementById('loopChk').checked = false;
+    recompute();
+  });
+
+  document.getElementById('loopChk').addEventListener('change', recompute);
+
+  function setK(newK){
+    newK = Math.max(2, Math.min(6, newK));
+    if (newK === state.k) return;
+    state.k = newK;
+    document.getElementById('kVal').textContent = state.k;
+    document.getElementById('kSqrtLabel').textContent = `racine ${state.k}-ième`;
+    document.getElementById('kMinus').disabled = state.k <= 2;
+    document.getElementById('kPlus').disabled = state.k >= 6;
+    rebuildRing();
+    recompute();
+  }
+  document.getElementById('kMinus').addEventListener('click', ()=>setK(state.k-1));
+  document.getElementById('kPlus').addEventListener('click', ()=>setK(state.k+1));
+
+  /* ============================================================
+     INITIALISATION
+     ============================================================ */
+  function init(){
+    zCssSize = zCanvas.getBoundingClientRect().width || 480;
+    rootsCssSize = rootsCanvas.getBoundingClientRect().width || 300;
+    setupCanvasDPR(zCanvas, zCssSize);
+    setupCanvasDPR(rootsCanvas, rootsCssSize);
+
+    window.addEventListener('resize', ()=>{
+      const newZ = zCanvas.getBoundingClientRect().width;
+      const newR = rootsCanvas.getBoundingClientRect().width;
+      if (newZ && Math.abs(newZ-zCssSize) > 2){ zCssSize = newZ; setupCanvasDPR(zCanvas, zCssSize); redrawZPlane(); }
+      if (newR && Math.abs(newR-rootsCssSize) > 2){ rootsCssSize = newR; setupCanvasDPR(rootsCanvas, rootsCssSize); redrawRootsPlane(); }
+    });
+
+    rebuildRing();
+    recompute();
+  }
+
+  init();
+
+})();
+</script>
+</body>
+</html>

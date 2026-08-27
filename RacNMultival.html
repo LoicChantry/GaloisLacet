@@ -6,8 +6,6 @@
 <title>La racine n-ième multivaluée</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.17.0/katex.min.css">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.17.0/katex.min.js"></script>
 <style>
   :root{
     --board: #16231c;
@@ -139,7 +137,7 @@
     <header>
       <h1>La racine <span class="accent-word">n</span>-ième multivaluée</h1>
       <p>
-        Pour <var>z</var> ≠ 0 fixé, <span id="mathRacine">l'ensemble des n racines n-ièmes de z</span> compte <var>n</var> valeurs, réparties
+        Pour <var>z</var> ≠ 0 fixé, l'ensemble <var>√[{n}]{z}</var> compte <var>n</var> valeurs, réparties
         cycliquement. Cet outil affiche, pour un point <var>z</var> que vous déplacez librement, ses
         <var>n</var> racines <var>n</var>-ièmes selon la détermination canonique (argument choisi dans [0, 2π[) — une couleur par détermination.
       </p>
@@ -154,7 +152,7 @@
         des racines <em>sautent</em> d'une position à l'autre, alors que l'ensemble des racines, lui, se déplace
         continûment. Ce n'est pas un défaut de l'outil : c'est exactement la discontinuité de la détermination
         canonique décrite dans le texte — et la raison pour laquelle un <em>suivi continu le long d'un chemin</em>
-        (voir l'autre applet, sur le redressement) demande un traitement différent.
+        demande un traitement différent.
       </p>
     </header>
 
@@ -546,14 +544,6 @@
     state.rootsRange = computeRootsRange(state.n);
     rebuildRing();
     redraw();
-
-    // rendu LaTeX du symbole \sqrt[{n}]{z} ; si KaTeX n'a pas pu se charger
-    // (hors-ligne), le repli en français lisible déjà présent dans le HTML reste affiché.
-    try{
-      if (window.katex){
-        katex.render("\\sqrt[\\{n\\}]{z}", document.getElementById('mathRacine'), {throwOnError:false});
-      }
-    } catch(e){ /* on garde le repli textuel */ }
   }
 
   init();

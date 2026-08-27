@@ -42,11 +42,7 @@
     padding: 36px 24px 56px;
   }
 
-  header{
-    margin-bottom: 28px;
-    border-bottom: 1px solid var(--line);
-    padding-bottom: 20px;
-  }
+  header{ margin:0; }
 
   h1{
     font-family:'Fraunces', Georgia, serif;
@@ -74,13 +70,16 @@
     color: var(--chalk-dim);
   }
 
-  .layout{
+  .top-grid{
     display: grid;
     grid-template-columns: 1fr 260px;
     gap: 22px;
     align-items: start;
+    margin-bottom: 28px;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 20px;
   }
-  @media (max-width: 820px){ .layout{ grid-template-columns: 1fr; } }
+  @media (max-width: 820px){ .top-grid{ grid-template-columns: 1fr; } }
 
   .panel{
     background: var(--board-2);
@@ -134,45 +133,30 @@
 <body>
 <div class="wrap">
 
-  <header>
-    <h1>La racine <span class="accent-word">n</span>-ième multivaluée</h1>
-    <p>
-      Pour <var>z</var> ≠ 0 fixé, l'ensemble <var>√[{n}]{z}</var> compte <var>n</var> valeurs, réparties
-      cycliquement. Cet outil affiche, pour un point <var>z</var> que vous déplacez librement, ses
-      <var>n</var> racines <var>n</var>-ièmes selon la détermination canonique (argument choisi dans [0, 2π[) — une couleur par détermination.
-    </p>
-    <p>Avec cet outil, vous pouvez :</p>
-    <ul>
-      <li><b>choisir n</b> (de 2 à 6) au sélecteur ;</li>
-      <li><b>déplacer z</b> librement dans le plan de gauche (cliquer-glisser, ou simplement cliquer ailleurs) ;</li>
-      <li><b>observer les n racines</b> se déplacer dans le plan de droite, chacune laissant une traînée colorée qui s'efface en 2 secondes.</li>
-    </ul>
-    <p class="caveat">
-      Faites traverser à <var>z</var> l'axe réel positif (la coupure de la détermination canonique) : les couleurs
-      des racines <em>sautent</em> d'une position à l'autre, alors que l'ensemble des racines, lui, se déplace
-      continûment. Ce n'est pas un défaut de l'outil : c'est exactement la discontinuité de la détermination
-      canonique décrite dans le texte — et la raison pour laquelle un <em>suivi continu le long d'un chemin</em>
-      (voir l'autre applet, sur le redressement) demande un traitement différent.
-    </p>
-  </header>
+  <div class="top-grid">
+    <header>
+      <h1>La racine <span class="accent-word">n</span>-ième multivaluée</h1>
+      <p>
+        Pour <var>z</var> ≠ 0 fixé, l'ensemble <var>√[{n}]{z}</var> compte <var>n</var> valeurs, réparties
+        cycliquement. Cet outil affiche, pour un point <var>z</var> que vous déplacez librement, ses
+        <var>n</var> racines <var>n</var>-ièmes selon la détermination canonique (argument choisi dans [0, 2π[) — une couleur par détermination.
+      </p>
+      <p>Avec cet outil, vous pouvez :</p>
+      <ul>
+        <li><b>choisir n</b> (de 2 à 6) au sélecteur ;</li>
+        <li><b>déplacer z</b> librement dans le plan de gauche (cliquer-glisser, ou simplement cliquer ailleurs) ;</li>
+        <li><b>observer les n racines</b> se déplacer dans le plan de droite, chacune laissant une traînée colorée qui s'efface en 2 secondes.</li>
+      </ul>
+      <p class="caveat">
+        Faites traverser à <var>z</var> l'axe réel positif (la coupure de la détermination canonique) : les couleurs
+        des racines <em>sautent</em> d'une position à l'autre, alors que l'ensemble des racines, lui, se déplace
+        continûment. Ce n'est pas un défaut de l'outil : c'est exactement la discontinuité de la détermination
+        canonique décrite dans le texte — et la raison pour laquelle un <em>suivi continu le long d'un chemin</em>
+        (voir l'autre applet, sur le redressement) demande un traitement différent.
+      </p>
+    </header>
 
-  <div class="layout">
-
-    <section class="panel">
-      <div class="canvases">
-        <div class="canvas-box">
-          <canvas id="zCanvas" width="480" height="480"></canvas>
-          <p class="canvas-caption">Plan de départ — z (glissez ou cliquez pour le déplacer)</p>
-        </div>
-        <div class="canvas-box">
-          <canvas id="wCanvas" width="480" height="480"></canvas>
-          <p class="canvas-caption">Racines n-ièmes de z (détermination canonique)</p>
-        </div>
-      </div>
-      <p class="status info" id="status">Cliquez ou glissez dans le plan de gauche pour déplacer z.</p>
-    </section>
-
-    <section class="panel">
+    <aside class="panel">
       <p class="panel-title">Déterminations</p>
       <p class="panel-sub">Une couleur par racine n-ième, réparties cycliquement.</p>
 
@@ -191,9 +175,22 @@
       </div>
 
       <ul class="roots-list" id="rootsList"></ul>
-    </section>
-
+    </aside>
   </div>
+
+  <section class="panel">
+    <div class="canvases">
+      <div class="canvas-box">
+        <canvas id="zCanvas" width="480" height="480"></canvas>
+        <p class="canvas-caption">Plan de départ — z (glissez ou cliquez pour le déplacer)</p>
+      </div>
+      <div class="canvas-box">
+        <canvas id="wCanvas" width="480" height="480"></canvas>
+        <p class="canvas-caption">Racines n-ièmes de z (détermination canonique)</p>
+      </div>
+    </div>
+    <p class="status info" id="status">Cliquez ou glissez dans le plan de gauche pour déplacer z.</p>
+  </section>
 
   <footer>
     Instrument pédagogique associé à la sous-section sur les racines n-ièmes multivaluées.
@@ -213,14 +210,21 @@
     n: 2,
     z: {re: 2.0, im: 0.8},
     dragging: false,
-    leftTrail: [],       // {re,im,t}
-    rightTrails: [],     // tableau de n tableaux de {re,im,t}
+    prevTheta: null,     // argument canonique au tick précédent, pour détecter un franchissement de coupure
+    leftTrail: [],       // {re,im,t,brk}
+    rightTrails: [],     // tableau de n tableaux de {re,im,t,brk}
+    rootsRange: 3.0,     // recalculé dès l'initialisation via computeRootsRange(n)
   };
 
   const EPS_ZERO = 0.12;      // rayon de la zone interdite autour de 0
   const FADE_MS = 2000;        // durée de rémanence
   const Z_RANGE = 4.4;
-  const ROOTS_RANGE = 3.0;    // suffisant pour tout n dans [2,6] avec |z|<=~6.2
+  // Le rayon d'affichage à droite dépend de n : |racine| = |z|^(1/n), donc pour que
+  // l'amplitude reste bien utilisée quel que soit n, on cadre sur (rayon max à gauche)^(1/n).
+  function computeRootsRange(n){
+    const cornerMax = Z_RANGE*Math.SQRT2; // le coin le plus éloigné visible dans le plan de gauche
+    return Math.pow(cornerMax, 1/n) * 1.15; // marge de 15% pour ne pas coller aux bords
+  }
 
   function colorForBranch(j,n,alpha){
     const h = Math.round(j*360/n);
@@ -234,10 +238,15 @@
     return `${a} ${sign} ${b.toFixed(2)}i`;
   }
 
-  function computeRoots(z, n){
-    const rho = Math.hypot(z.re, z.im);
+  function canonicalTheta(z){
     let theta = Math.atan2(z.im, z.re);
     if (theta < 0) theta += 2*Math.PI; // convention canonique : theta in [0,2*pi[
+    return theta;
+  }
+
+  function computeRoots(z, n){
+    const rho = Math.hypot(z.re, z.im);
+    const theta = canonicalTheta(z);
     const r = Math.pow(rho, 1/n);
     const roots = [];
     for (let j=0;j<n;j++){
@@ -307,21 +316,23 @@
   }
 
   function drawTrail(ctx, toPx, trail, colorFn, now){
-    if (trail.length === 1){
-      const age = now - trail[0].t;
-      if (age < FADE_MS){
-        const life = 1 - age/FADE_MS;
-        const p = toPx(trail[0].re, trail[0].im);
-        ctx.fillStyle = colorFn(life);
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, 2 + 2.5*life, 0, Math.PI*2);
-        ctx.fill();
-      }
-      return;
-    }
-    for (let i=1;i<trail.length;i++){
+    // points isolés : début de traînée, ou juste après un franchissement de coupure
+    for (let i=0;i<trail.length;i++){
       const age = now - trail[i].t;
       if (age >= FADE_MS) continue;
+      if (i===0 || trail[i].brk){
+        const life = 1 - age/FADE_MS;
+        const p = toPx(trail[i].re, trail[i].im);
+        ctx.fillStyle = colorFn(life);
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 1.6 + 2*life, 0, Math.PI*2);
+        ctx.fill();
+      }
+    }
+    // segments reliant les échantillons consécutifs, sauf à la traversée d'une coupure
+    for (let i=1;i<trail.length;i++){
+      const age = now - trail[i].t;
+      if (age >= FADE_MS || trail[i].brk) continue;
       const life = 1 - age/FADE_MS;
       const p0 = toPx(trail[i-1].re, trail[i-1].im);
       const p1 = toPx(trail[i].re, trail[i].im);
@@ -371,10 +382,18 @@
     const now = performance.now();
 
     if (state.dragging){
-      state.leftTrail.push({re: state.z.re, im: state.z.im, t: now});
+      const theta = canonicalTheta(state.z);
+      let jumped = false;
+      if (state.prevTheta !== null){
+        const delta = theta - state.prevTheta;
+        if (Math.abs(delta) > Math.PI) jumped = true; // theta a "sauté" de ~2pi à ~0, ou l'inverse
+      }
+      state.prevTheta = theta;
+
+      state.leftTrail.push({re: state.z.re, im: state.z.im, t: now, brk: false});
       const roots = computeRoots(state.z, state.n);
       for (let j=0;j<state.n;j++){
-        state.rightTrails[j].push({re: roots[j].re, im: roots[j].im, t: now});
+        state.rightTrails[j].push({re: roots[j].re, im: roots[j].im, t: now, brk: jumped});
       }
     }
 
@@ -407,8 +426,8 @@
     zCtx.beginPath(); zCtx.arc(pz.x,pz.y,6,0,Math.PI*2); zCtx.fill(); zCtx.stroke();
 
     // --- plan des racines ---
-    const toPxW = makeToPx(wSize, ROOTS_RANGE);
-    drawGrid(wCtx, wSize, ROOTS_RANGE, toPxW);
+    const toPxW = makeToPx(wSize, state.rootsRange);
+    drawGrid(wCtx, wSize, state.rootsRange, toPxW);
     const o = toPxW(0,0);
     wCtx.fillStyle = '#E8C468';
     wCtx.beginPath(); wCtx.arc(o.x,o.y,2.5,0,Math.PI*2); wCtx.fill();
@@ -467,6 +486,7 @@
 
   zCanvas.addEventListener('pointerdown', (e)=>{
     state.dragging = true;
+    state.prevTheta = null;
     zCanvas.setPointerCapture(e.pointerId);
     zCanvas.style.cursor = 'grabbing';
     updateZFromEvent(e);
@@ -496,6 +516,7 @@
     document.getElementById('nMinus').disabled = state.n <= 2;
     document.getElementById('nPlus').disabled = state.n >= 6;
     state.rightTrails = Array.from({length: state.n}, ()=>[]);
+    state.rootsRange = computeRootsRange(state.n);
     rebuildRing();
     ensureLoopRunning();
     redraw();
@@ -520,6 +541,7 @@
     });
 
     state.rightTrails = Array.from({length: state.n}, ()=>[]);
+    state.rootsRange = computeRootsRange(state.n);
     rebuildRing();
     redraw();
   }

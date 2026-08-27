@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Le commutateur de deux lacets</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --board: #16231c;
+    --board-2: #1b2b21;
+    --board-3: #203627;
+    --chalk: #EDEAE0;
+    --chalk-dim: #9FB0A6;
+    --chalk-faint: #6d7d73;
+    --accent: #E8C468;
+    --error: #D97B6C;
+    --line: rgba(237,234,224,0.12);
+    --radius: 3px;
+    --c-g1: #7fb0d9;
+    --c-g2: #d98fbd;
+  }
+
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; background: var(--board); color: var(--chalk); font-family:'IBM Plex Mono', ui-monospace, Consolas, monospace; }
+  body{
+    min-height:100vh;
+    background-image:
+      radial-gradient(ellipse at 20% 10%, rgba(237,234,224,0.035), transparent 60%),
+      radial-gradient(ellipse at 85% 90%, rgba(237,234,224,0.03), transparent 55%);
+  }
+  .wrap{ max-width: 1180px; margin: 0 auto; padding: 36px 24px 56px; }
+
+  h1{
+    font-family:'Fraunces', Georgia, serif; font-weight: 600; font-optical-sizing: auto;
+    font-size: clamp(1.5rem, 2.4vw, 2.05rem); margin: 0 0 8px; letter-spacing: -0.01em; color: var(--chalk);
+  }
+  h1 .accent-word{ color: var(--accent); font-style: italic; font-weight: 500; }
+  header{ margin:0; }
+  header p{ margin: 0; color: var(--chalk-dim); font-size: 0.92rem; line-height: 1.55; }
+  header p + p{ margin-top: 10px; }
+  header var{ font-style: normal; font-family:'IBM Plex Mono', monospace; color: var(--chalk); font-weight: 600; }
+  header ul{ margin: 10px 0 0; padding-left: 1.2em; color: var(--chalk-dim); font-size: 0.88rem; line-height: 1.6; }
+  header li b{ color: var(--chalk); font-weight: 600; }
+  header .caveat{
+    margin-top: 12px; padding: 10px 12px; background: var(--board-3);
+    border-left: 3px solid var(--accent); border-radius: var(--radius);
+    font-size: 0.84rem; color: var(--chalk-dim);
+  }
+
+  .top-grid{
+    display: grid; grid-template-columns: 1fr 300px; gap: 22px; align-items: start;
+    margin-bottom: 28px; border-bottom: 1px solid var(--line); padding-bottom: 20px;
+  }
+  @media (max-width: 860px){ .top-grid{ grid-template-columns: 1fr; } }
+
+  .panel{ background: var(--board-2); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px 18px 20px; margin-bottom: 22px; }
+  .panel-title{ font-family:'Fraunces', Georgia, serif; font-size: 0.98rem; font-weight: 600; color: var(--chalk); margin: 0 0 4px; }
+  .panel-sub{ font-size: 0.74rem; color: var(--chalk-faint); margin: 0 0 14px; line-height:1.5; }
+
+  /* --- tabs de sélection du chemin actif --- */
+  .tabs{ display:flex; gap:8px; margin-bottom: 12px; }
+  .tab-btn{
+    flex:1; font-family:'IBM Plex Mono', monospace; font-size: 0.82rem; font-weight:600;
+    padding: 9px 8px; border-radius: var(--radius); border: 1px solid var(--line);
+    background: var(--board-3); color: var(--chalk-dim); cursor:pointer;
+    transition: background .15s ease, color .15s ease, border-color .15s ease;
+  }
+  .tab-btn .sw{ display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:6px; vertical-align:middle; }
+  .tab-btn.active{ color: var(--chalk); border-color: var(--chalk-faint); }
+  .tab-btn.active[data-path="g1"]{ background: rgba(127,176,217,0.18); }
+  .tab-btn.active[data-path="g2"]{ background: rgba(217,143,189,0.18); }
+  .tab-btn:hover{ border-color: var(--chalk-faint); }
+
+  .btnrow{ display:flex; gap:8px; margin-bottom: 16px; flex-wrap:wrap; }
+  button.btn{
+    font-family:'IBM Plex Mono', monospace; font-size: 0.76rem; font-weight: 500; color: var(--chalk);
+    background: var(--board-3); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 8px 12px; cursor: pointer; transition: background .15s ease, border-color .15s ease, opacity .15s ease;
+  }
+  button.btn:hover:not(:disabled){ background:#2a4433; border-color: var(--chalk-faint); }
+  button.btn:disabled{ opacity:.35; cursor:not-allowed; }
+  button.btn.primary{ background:#35543f; border-color:#3f6b4a; }
+  button.btn.primary:hover:not(:disabled){ background:#3d6248; }
+  button.btn:focus-visible, input:focus-visible{ outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* --- k stepper + ring (repris de l'applet racine k-ième) --- */
+  .k-row{ display:flex; align-items:center; gap:14px; margin-bottom: 16px; }
+  .k-stepper{ display:flex; align-items:center; border: 1px solid var(--line); border-radius: var(--radius); overflow:hidden; }
+  .k-stepper button{ background: var(--board-3); border: none; color: var(--chalk); width: 30px; height: 30px; font-family:'IBM Plex Mono', monospace; font-size: 1rem; cursor: pointer; transition: background .15s ease; }
+  .k-stepper button:hover{ background:#2a4433; }
+  .k-stepper button:disabled{ opacity:.3; cursor:not-allowed; }
+  .k-stepper .k-val{ width: 44px; text-align:center; font-size: 1rem; font-weight:600; }
+  .k-label{ font-size: 0.74rem; color: var(--chalk-dim); line-height:1.4; }
+  .k-label b{ color: var(--chalk); font-weight:600; }
+
+  .ring-box{ display:flex; align-items:center; gap:16px; padding: 10px 4px 4px; border-top: 1px dashed var(--line); }
+  .ring{ position:relative; width: 64px; height:64px; flex: 0 0 auto; }
+  .ring::before{ content:""; position:absolute; inset:0; border-radius:50%; border: 1px dashed var(--chalk-faint); opacity:.55; }
+  .ring-dot{
+    position:absolute; width:14px; height:14px; border-radius:50%; top:50%; left:50%; margin:-7px 0 0 -7px;
+    box-shadow: 0 0 0 2px rgba(22,35,28,0.9); padding:0; cursor:pointer; border: 2px solid transparent;
+    transition: opacity .15s ease, background .15s ease, border-color .15s ease;
+  }
+  .ring-dot:hover{ opacity:1 !important; }
+  .ring-dot:focus-visible{ outline: 2px solid var(--accent); outline-offset: 2px; }
+  .ring-caption{ font-size: 0.68rem; color: var(--chalk-faint); line-height:1.5; }
+
+  /* --- canvases --- */
+  .canvases{ display:grid; grid-template-columns: 1fr 1fr; gap: 22px; }
+  @media (max-width: 720px){ .canvases{ grid-template-columns: 1fr; } }
+  .canvas-box canvas{
+    display:block; width:100%; aspect-ratio: 1/1; background: var(--board);
+    border: 1px solid var(--line); border-radius: var(--radius); cursor: crosshair; touch-action:none;
+  }
+  .canvas-caption{ font-size: 0.72rem; color: var(--chalk-faint); margin: 8px 0 0; text-align:center; line-height:1.4; }
+
+  .status{ min-height: 1.3em; font-size: 0.78rem; margin-top: 10px; }
+  .status.error{ color: var(--error); }
+  .status.info{ color: var(--chalk-faint); }
+  .status.ok{ color: #8fbf9a; }
+
+  /* --- lecture du commutateur --- */
+  .scrub-row{ display:flex; align-items:center; gap:12px; margin: 14px 0 6px; }
+  .scrub-row input[type=range]{ flex:1; accent-color: var(--accent); }
+  .phase-label{ font-size: 0.8rem; color: var(--chalk); text-align:center; margin-bottom: 4px; min-height:1.4em; }
+  .t-readout{ font-size: 0.76rem; color: var(--chalk-dim); width: 92px; text-align:right; }
+
+  /* --- readouts --- */
+  .readouts{ display:grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-top: 8px; }
+  @media (max-width: 860px){ .readouts{ grid-template-columns: repeat(2,1fr); } }
+  .readout-card{ background: var(--board-3); border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 12px; }
+  .readout-card .rc-label{ font-size: 0.66rem; color: var(--chalk-faint); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.04em; }
+  .readout-card .rc-value{ font-size: 1.0rem; color: var(--chalk); font-weight: 600; }
+  .readout-card.g1 .rc-value{ color: var(--c-g1); }
+  .readout-card.g2 .rc-value{ color: var(--c-g2); }
+  .readout-card.match .rc-value{ color: #8fbf9a; }
+  .identity-line{ margin-top: 12px; font-size: 0.85rem; color: var(--chalk-dim); text-align:center; }
+  .identity-line b{ color: var(--chalk); }
+
+  .compare-grid{ display:grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 16px; }
+  @media (max-width: 720px){ .compare-grid{ grid-template-columns: 1fr; } }
+  .compare-card{ background: var(--board-3); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 14px; font-size: 0.8rem; color: var(--chalk-dim); line-height:1.5; }
+  .compare-card b{ color: var(--chalk); }
+  .compare-card .verdict.yes{ color: #8fbf9a; font-weight:600; }
+  .compare-card .verdict.no{ color: var(--error); font-weight:600; }
+
+  .roots-list{ list-style:none; margin: 14px 0 0; padding:0; display:flex; flex-wrap:wrap; gap: 10px 18px; }
+  .roots-list li{ display:flex; align-items:center; gap:8px; font-size: 0.78rem; color: var(--chalk-dim); }
+  .dot{ width:9px; height:9px; border-radius:50%; flex: 0 0 auto; }
+  .roots-list .val{ color: var(--chalk); }
+
+  footer{ margin-top: 10px; padding-top: 16px; border-top: 1px solid var(--line); font-size: 0.72rem; color: var(--chalk-faint); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="top-grid">
+    <header>
+      <h1>Le commutateur de deux <span class="accent-word">lacets</span></h1>
+      <p>
+        Deux lacets <var>γ1</var> et <var>γ2</var>, basés au même point, peuvent avoir n'importe quel
+        indice — y compris des indices qu'aucun radical d'ordre <var>k</var> ne saurait refermer tout seul.
+        Leur <em>commutateur</em> <var>γ1 ⋆ γ2 ⋆ γ1⁻¹ ⋆ γ2⁻¹</var>, lui, a toujours un indice nul.
+      </p>
+      <p>Avec cet outil, vous pouvez :</p>
+      <ul>
+        <li><b>tracer γ1 puis γ2</b>, deux lacets basés au même point noir déplaçable ;</li>
+        <li><b>observer les quatre étapes</b> du commutateur se dérouler, avec l'indice mesuré confronté à la prévision algébrique ;</li>
+        <li><b>suivre la racine k-ième</b> du commutateur, qui se referme toujours — contrairement à celle de γ1 ou γ2 pris isolément.</li>
+      </ul>
+      <p class="caveat">
+        Choisissez délibérément deux lacets aux indices peu commodes (par exemple un lacet qui entoure 0 une fois,
+        un autre qui l'entoure deux fois) : aucun des deux ne referme sa racine <var>k</var>-ième pour la plupart
+        des valeurs de <var>k</var>. Le commutateur, construit à partir d'eux, referme pourtant systématiquement
+        la sienne — c'est ce miracle, purement algébrique, que cette sous-section établit une fois pour toutes.
+      </p>
+    </header>
+
+    <aside class="panel" style="margin-bottom:0;">
+      <p class="panel-title">Tracé</p>
+      <p class="panel-sub">Cliquez pour prolonger le chemin actif ; le point noir (départ commun) se glisse.</p>
+      <div class="tabs">
+        <button class="tab-btn active" id="tabG1" data-path="g1" type="button"><span class="sw" style="background:var(--c-g1)"></span>Tracer γ1</button>
+        <button class="tab-btn" id="tabG2" data-path="g2" type="button"><span class="sw" style="background:var(--c-g2)"></span>Tracer γ2</button>
+      </div>
+      <div class="btnrow">
+        <button class="btn" id="clearG1" type="button">Effacer γ1</button>
+        <button class="btn" id="clearG2" type="button">Effacer γ2</button>
+      </div>
+
+      <div class="k-row">
+        <div class="k-stepper">
+          <button id="kMinus" type="button" aria-label="Diminuer k">−</button>
+          <span class="k-val" id="kVal">2</span>
+          <button id="kPlus" type="button" aria-label="Augmenter k">+</button>
+        </div>
+        <div class="k-label">ordre du radical<br><b id="kLabel">racine 2-ième</b></div>
+      </div>
+      <div class="ring-box">
+        <div class="ring" id="ring"></div>
+        <p class="ring-caption">Cliquez un secteur pour afficher ou masquer cette détermination.</p>
+      </div>
+    </aside>
+  </div>
+
+  <section class="panel">
+    <div class="canvases">
+      <div class="canvas-box">
+        <canvas id="zCanvas" width="480" height="480"></canvas>
+        <p class="canvas-caption">Plan des coefficients — γ1 (bleu), γ2 (rose), commutateur (jaune)</p>
+      </div>
+      <div class="canvas-box">
+        <canvas id="wCanvas" width="480" height="480"></canvas>
+        <p class="canvas-caption">Racine k-ième du commutateur, suivie à la trace</p>
+      </div>
+    </div>
+    <p class="status info" id="status">Tracez γ1 (au moins un clic), puis basculez sur γ2.</p>
+
+    <div class="scrub-row">
+      <button class="btn primary" id="playBtn" type="button" disabled>▶ Lecture</button>
+      <input type="range" id="scrub" min="0" max="1" step="0.001" value="0" disabled>
+      <span class="t-readout" id="tReadout">t = 0.000</span>
+    </div>
+    <p class="phase-label" id="phaseLabel"></p>
+
+    <ul class="roots-list" id="rootsList"></ul>
+  </section>
+
+  <section class="panel">
+    <p class="panel-title">Indices</p>
+    <div class="readouts">
+      <div class="readout-card g1">
+        <div class="rc-label">indice de γ1</div>
+        <div class="rc-value" id="indG1">—</div>
+      </div>
+      <div class="readout-card g2">
+        <div class="rc-label">indice de γ2</div>
+        <div class="rc-value" id="indG2">—</div>
+      </div>
+      <div class="readout-card">
+        <div class="rc-label">indice mesuré du commutateur</div>
+        <div class="rc-value" id="indMeasured">—</div>
+      </div>
+      <div class="readout-card match">
+        <div class="rc-label">prévision algébrique</div>
+        <div class="rc-value" id="indPredicted">—</div>
+      </div>
+    </div>
+    <p class="identity-line" id="identityLine"></p>
+
+    <div class="compare-grid">
+      <div class="compare-card" id="compareG1">racine k-ième de γ1 seul : —</div>
+      <div class="compare-card" id="compareG2">racine k-ième de γ2 seul : —</div>
+    </div>
+  </section>
+
+  <footer>
+    Instrument pédagogique associé à la sous-section sur la concaténation et le commutateur de chemins.
+    Fonctionne hors-ligne — ce fichier est autonome.
+  </footer>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ============================================================
+     ÉTAT GLOBAL
+     ============================================================ */
+  const state = {
+    k: 2,
+    visibleBranches: new Set([0]),  // déterminations affichées à droite ; une seule par défaut
+    base: {re: 2.0, im: 0.0},
+    mode: 'g1',              // chemin actif pour les clics
+    pts1: [],                // points cliqués pour gamma1 (hors point de base)
+    pts2: [],
+    draggingBase: false,
+
+    valid: false,            // le commutateur et ses deux briques sont-ils exploitables ?
+    ind1: null, ind2: null,
+    measuredIndex: null,
+
+    commSample: null,        // {re[],im[]} du commutateur, sur N_TOTAL points
+    theta: null, rho: null,
+    branchPaths: null,
+
+    t: 0,
+    playing: false,
+  };
+
+  const EPS_ZERO = 0.16;
+  const N_PIECE = 480;
+  const N_TOTAL = 1920; // multiple de 4, pour un découpage exact en 4 phases égales
+  const DURATION_MS = 9000;
+  const Z_RANGE = 4.4;
+
+  const reducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* ============================================================
+     SPLINE (Catmull-Rom -> Bézier), évaluation ponctuelle et complète
+     ============================================================ */
+  function catmullToBezier(p0,p1,p2,p3){
+    return {
+      c1: { re: p1.re + (p2.re-p0.re)/6, im: p1.im + (p2.im-p0.im)/6 },
+      c2: { re: p2.re - (p3.re-p1.re)/6, im: p2.im - (p3.im-p1.im)/6 }
+    };
+  }
+  function cubicBezierAt(p1,c1,c2,p2,u){
+    const mu=1-u, a=mu*mu*mu, b=3*mu*mu*u, c=3*mu*u*u, d=u*u*u;
+    return { re:a*p1.re+b*c1.re+c*c2.re+d*p2.re, im:a*p1.im+b*c1.im+c*c2.im+d*p2.im };
+  }
+  function evalSplineAt(pts, t){
+    const segN = pts.length-1;
+    if (segN<=0) return pts[0];
+    let segT = t*segN, seg = Math.floor(segT);
+    if (seg>=segN) seg = segN-1;
+    const u = segT-seg;
+    const p0=pts[seg-1]||pts[seg], p1=pts[seg], p2=pts[seg+1], p3=pts[seg+2]||pts[seg+1];
+    const {c1,c2}=catmullToBezier(p0,p1,p2,p3);
+    return cubicBezierAt(p1,c1,c2,p2,u);
+  }
+  function sampleSplineFull(pts, n){
+    const re=new Float64Array(n), im=new Float64Array(n);
+    for (let i=0;i<n;i++){ const t=i/(n-1); const p=evalSplineAt(pts,t); re[i]=p.re; im[i]=p.im; }
+    return {re,im};
+  }
+  function fullPts(clicks){ return [state.base, ...clicks, state.base]; }
+
+  /* ============================================================
+     COMMUTATEUR : fonction par morceaux, puis échantillonnage
+     ============================================================ */
+  function evalCommutatorAt(t, pts1, pts2){
+    let phase = Math.min(3, Math.floor(t*4));
+    const localT = t*4 - phase;
+    if (phase===0) return evalSplineAt(pts1, localT);
+    if (phase===1) return evalSplineAt(pts2, localT);
+    if (phase===2) return evalSplineAt(pts1, 1-localT);
+    return evalSplineAt(pts2, 1-localT);
+  }
+  function sampleCommutator(pts1, pts2, n){
+    const re=new Float64Array(n), im=new Float64Array(n);
+    for (let i=0;i<n;i++){
+      const t=i/(n-1);
+      const p = evalCommutatorAt(t, pts1, pts2);
+      re[i]=p.re; im[i]=p.im;
+    }
+    return {re,im};
+  }
+
+  function minDistToZero(re, im){
+    let m = Infinity;
+    for (let i=0;i<re.length;i++){ const d=Math.hypot(re[i],im[i]); if (d<m) m=d; }
+    return m;
+  }
+
+  function unwrap(re, im){
+    const n = re.length;
+    const theta = new Float64Array(n), rho = new Float64Array(n);
+    rho[0]=Math.hypot(re[0],im[0]); theta[0]=Math.atan2(im[0],re[0]);
+    for (let i=1;i<n;i++){
+      rho[i]=Math.hypot(re[i],im[i]);
+      const raw = Math.atan2(im[i],re[i]);
+      let d = raw - Math.atan2(im[i-1],re[i-1]);
+      while (d>Math.PI) d-=2*Math.PI;
+      while (d<=-Math.PI) d+=2*Math.PI;
+      theta[i]=theta[i-1]+d;
+    }
+    return {theta,rho};
+  }
+
+  function indexOfClosedSample(sample){
+    const u = unwrap(sample.re, sample.im);
+    const n = u.theta.length;
+    return Math.round((u.theta[n-1]-u.theta[0])/(2*Math.PI));
+  }
+
+  function computeBranchPaths(theta, rho, k){
+    const n = theta.length;
+    const paths = [];
+    for (let j=0;j<k;j++){
+      const re=new Float64Array(n), im=new Float64Array(n);
+      for (let i=0;i<n;i++){
+        const r = Math.pow(rho[i], 1/k);
+        const ang = (theta[i]+2*Math.PI*j)/k;
+        re[i]=r*Math.cos(ang); im[i]=r*Math.sin(ang);
+      }
+      paths.push({re,im});
+    }
+    return paths;
+  }
+
+  function hueForBranch(j,k){ return Math.round(j*360/k); }
+  function colorForBranch(j,k,alpha){ return `hsla(${hueForBranch(j,k)}, 62%, 66%, ${alpha===undefined?1:alpha})`; }
+  function fmtComplex(re,im){
+    const a=(Math.abs(re)<0.005?0:re).toFixed(2), b=Math.abs(im);
+    const sign = im<-0.0049?'−':'+';
+    return `${a} ${sign} ${b.toFixed(2)}i`;
+  }
+  function subscript(j){ const map=['₀','₁','₂','₃','₄','₅','₆','₇','₈','₉']; return String(j).split('').map(d=>map[+d]).join(''); }
+  function superscript(j){ const map={'-':'⁻','0':'⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹'}; return String(j).split('').map(c=>map[c]||c).join(''); }
+
+  /* ============================================================
+     CANVAS
+     ============================================================ */
+  const zCanvas = document.getElementById('zCanvas');
+  const wCanvas = document.getElementById('wCanvas');
+  let zSize=480, wSize=480, wRange=3.0;
+
+  function setupDPR(canvas,size){
+    const dpr=window.devicePixelRatio||1;
+    canvas.width=size*dpr; canvas.height=size*dpr;
+    canvas.style.width=size+'px'; canvas.style.height=size+'px';
+    const ctx=canvas.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0);
+    return ctx;
+  }
+  let zCtx = setupDPR(zCanvas,zSize);
+  let wCtx = setupDPR(wCanvas,wSize);
+
+  function makeToPx(size,range){ return (re,im)=>({x:size/2+re*(size/(2*range)), y:size/2-im*(size/(2*range))}); }
+  function makeFromPx(size,range){ return (x,y)=>({re:(x-size/2)/(size/(2*range)), im:(size/2-y)/(size/(2*range))}); }
+
+  function drawGrid(ctx,size,range,toPx){
+    ctx.clearRect(0,0,size,size);
+    ctx.strokeStyle='rgba(159,176,166,0.16)'; ctx.lineWidth=1;
+    let step=range/8; const mag=Math.pow(10,Math.floor(Math.log10(step||1))); step=Math.ceil(step/mag)*mag||1;
+    for (let g=-Math.ceil(range/step)*step; g<=range; g+=step){
+      const p1=toPx(g,-range), p2=toPx(g,range);
+      ctx.beginPath(); ctx.moveTo(p1.x+0.5,p1.y); ctx.lineTo(p2.x+0.5,p2.y); ctx.stroke();
+      const p3=toPx(-range,g), p4=toPx(range,g);
+      ctx.beginPath(); ctx.moveTo(p3.x,p3.y+0.5); ctx.lineTo(p4.x,p4.y+0.5); ctx.stroke();
+    }
+    ctx.strokeStyle='rgba(237,234,224,0.32)'; ctx.lineWidth=1.2;
+    const o1=toPx(-range,0), o2=toPx(range,0);
+    ctx.beginPath(); ctx.moveTo(o1.x,o1.y); ctx.lineTo(o2.x,o2.y); ctx.stroke();
+    const o3=toPx(0,-range), o4=toPx(0,range);
+    ctx.beginPath(); ctx.moveTo(o3.x,o3.y); ctx.lineTo(o4.x,o4.y); ctx.stroke();
+  }
+  function drawForbiddenZone(ctx,toPx,color){
+    const c=toPx(0,0); const rPx=toPx(EPS_ZERO,0).x-toPx(0,0).x;
+    ctx.save(); ctx.setLineDash([3,4]); ctx.strokeStyle=color; ctx.globalAlpha=0.7; ctx.lineWidth=1.3;
+    ctx.beginPath(); ctx.arc(c.x,c.y,Math.abs(rPx),0,Math.PI*2); ctx.stroke(); ctx.restore();
+  }
+  function strokePolyline(ctx,toPx,sample,color,alpha,width){
+    ctx.strokeStyle=color; ctx.globalAlpha=alpha===undefined?1:alpha; ctx.lineWidth=width||2;
+    ctx.beginPath();
+    for (let i=0;i<sample.re.length;i++){
+      const p=toPx(sample.re[i],sample.im[i]);
+      if (i===0) ctx.moveTo(p.x,p.y); else ctx.lineTo(p.x,p.y);
+    }
+    ctx.stroke(); ctx.globalAlpha=1;
+  }
+
+  /* ============================================================
+     RING LEGEND
+     ============================================================ */
+  function rebuildRing(){
+    const ring=document.getElementById('ring'); ring.innerHTML='';
+    const R=26;
+    for (let j=0;j<state.k;j++){
+      const angle=(j/state.k)*2*Math.PI - Math.PI/2;
+      const dot=document.createElement('button');
+      dot.type = 'button';
+      dot.className='ring-dot';
+      dot.style.transform=`translate(${Math.cos(angle)*R}px, ${Math.sin(angle)*R}px)`;
+      dot.title=`w${subscript(j)} : cliquez pour afficher/masquer`;
+      dot.dataset.j = j;
+      dot.addEventListener('click', ()=>{
+        if (state.visibleBranches.has(j)) state.visibleBranches.delete(j);
+        else state.visibleBranches.add(j);
+        rebuildRing();
+        redraw();
+      });
+      ring.appendChild(dot);
+    }
+    updateRingAppearance();
+  }
+
+  function updateRingAppearance(){
+    const ring = document.getElementById('ring');
+    const dots = ring.querySelectorAll('.ring-dot');
+    dots.forEach(dot=>{
+      const j = parseInt(dot.dataset.j, 10);
+      const on = state.visibleBranches.has(j);
+      dot.style.background = on ? colorForBranch(j,state.k,1) : 'transparent';
+      dot.style.border = on ? 'none' : `2px solid ${colorForBranch(j,state.k,0.7)}`;
+      dot.style.opacity = on ? '1' : '0.55';
+    });
+  }
+
+  /* ============================================================
+     RECALCUL GLOBAL
+     ============================================================ */
+  function setStatus(msg,kind){ const el=document.getElementById('status'); el.textContent=msg; el.className='status '+(kind||'info'); }
+
+  function recomputeAll(){
+    stopPlayback();
+    state.t=0;
+    document.getElementById('scrub').value=0;
+    document.getElementById('tReadout').textContent='t = 0.000';
+    document.getElementById('phaseLabel').textContent='';
+
+    const p1 = fullPts(state.pts1);
+    const p2 = fullPts(state.pts2);
+
+    const s1 = sampleSplineFull(p1, N_PIECE);
+    const s2 = sampleSplineFull(p2, N_PIECE);
+
+    const d1 = minDistToZero(s1.re, s1.im);
+    const d2 = minDistToZero(s2.re, s2.im);
+
+    if (state.pts1.length===0 && state.pts2.length===0){
+      state.valid=false;
+      setStatus('Tracez γ1 (au moins un clic), puis basculez sur γ2.', 'info');
+      resetReadouts();
+      updatePlayButtonLabel();
+      redraw();
+      return;
+    }
+    if (d1 < EPS_ZERO || d2 < EPS_ZERO){
+      state.valid=false;
+      setStatus('L\'un des deux chemins passe trop près de 0 — ajustez le tracé.', 'error');
+      resetReadouts();
+      updatePlayButtonLabel();
+      redraw();
+      return;
+    }
+
+    state.ind1 = indexOfClosedSample(s1);
+    state.ind2 = indexOfClosedSample(s2);
+
+    const comm = sampleCommutator(p1, p2, N_TOTAL);
+    const dComm = minDistToZero(comm.re, comm.im);
+    if (dComm < EPS_ZERO){
+      state.valid=false;
+      setStatus('Le commutateur construit passe trop près de 0 — ajustez γ1 ou γ2.', 'error');
+      resetReadouts();
+      updatePlayButtonLabel();
+      redraw();
+      return;
+    }
+
+    state.commSample = comm;
+    const u = unwrap(comm.re, comm.im);
+    state.theta = u.theta; state.rho = u.rho;
+    state.measuredIndex = Math.round((u.theta[u.theta.length-1]-u.theta[0])/(2*Math.PI));
+    state.branchPaths = computeBranchPaths(state.theta, state.rho, state.k);
+    state.valid = true;
+
+    document.getElementById('playBtn').disabled = false;
+    document.getElementById('scrub').disabled = false;
+    setStatus('Commutateur valide. Cliquez « Lecture » pour le parcourir.', 'ok');
+    updatePlayButtonLabel();
+
+    updateReadouts();
+    redraw();
+  }
+
+  function resetReadouts(){
+    document.getElementById('playBtn').disabled = true;
+    document.getElementById('scrub').disabled = true;
+    document.getElementById('indG1').textContent = state.ind1===null?'—':state.ind1;
+    document.getElementById('indG2').textContent = state.ind2===null?'—':state.ind2;
+    document.getElementById('indMeasured').textContent = '—';
+    document.getElementById('indPredicted').textContent = '—';
+    document.getElementById('identityLine').textContent = '';
+    document.getElementById('compareG1').textContent = 'racine k-ième de γ1 seul : —';
+    document.getElementById('compareG2').textContent = 'racine k-ième de γ2 seul : —';
+    document.getElementById('rootsList').innerHTML = '';
+  }
+
+  function updateReadouts(){
+    document.getElementById('indG1').textContent = state.ind1;
+    document.getElementById('indG2').textContent = state.ind2;
+    document.getElementById('indMeasured').textContent = state.measuredIndex;
+    document.getElementById('indPredicted').textContent = '0';
+    document.getElementById('identityLine').innerHTML =
+      `ind(γ1)+ind(γ2)−ind(γ1)−ind(γ2) = <b>${state.ind1}+${state.ind2}−${state.ind1}−${state.ind2} = 0</b>` +
+      (state.measuredIndex===0 ? ' — conforme à l\'indice mesuré.' : ' — écart numérique (chemin proche de 0 ?)');
+
+    const k = state.k;
+    const closes1 = ((state.ind1 % k) + k) % k === 0;
+    const closes2 = ((state.ind2 % k) + k) % k === 0;
+    document.getElementById('compareG1').innerHTML =
+      `racine ${k}-ième de <b style="color:var(--c-g1)">γ1</b> seul : k | ind(γ1) ⟺ ${k} | ${state.ind1} — <span class="verdict ${closes1?'yes':'no'}">${closes1?'se referme':'ne se referme pas'}</span>`;
+    document.getElementById('compareG2').innerHTML =
+      `racine ${k}-ième de <b style="color:var(--c-g2)">γ2</b> seul : k | ind(γ2) ⟺ ${k} | ${state.ind2} — <span class="verdict ${closes2?'yes':'no'}">${closes2?'se referme':'ne se referme pas'}</span>`;
+  }
+
+  /* ============================================================
+     RENDU
+     ============================================================ */
+  function redraw(){
+    // plan des coefficients
+    const toPxZ = makeToPx(zSize, Z_RANGE);
+    drawGrid(zCtx, zSize, Z_RANGE, toPxZ);
+    drawForbiddenZone(zCtx, toPxZ, '#E8C468');
+
+    {
+      const s1 = sampleSplineFull(fullPts(state.pts1), N_PIECE);
+      strokePolyline(zCtx, toPxZ, s1, '#7fb0d9', 0.85, 2);
+    }
+    {
+      const s2 = sampleSplineFull(fullPts(state.pts2), N_PIECE);
+      strokePolyline(zCtx, toPxZ, s2, '#d98fbd', 0.85, 2);
+    }
+    zCtx.fillStyle = '#7fb0d9';
+    for (const p of state.pts1){ const px=toPxZ(p.re,p.im); zCtx.beginPath(); zCtx.arc(px.x,px.y,3,0,Math.PI*2); zCtx.fill(); }
+    zCtx.fillStyle = '#d98fbd';
+    for (const p of state.pts2){ const px=toPxZ(p.re,p.im); zCtx.beginPath(); zCtx.arc(px.x,px.y,3,0,Math.PI*2); zCtx.fill(); }
+
+    // point de base
+    const pb = toPxZ(state.base.re, state.base.im);
+    zCtx.fillStyle='#0c1510'; zCtx.strokeStyle='#EDEAE0'; zCtx.lineWidth=1.6;
+    zCtx.beginPath(); zCtx.arc(pb.x,pb.y,6,0,Math.PI*2); zCtx.fill(); zCtx.stroke();
+
+    // marqueur de progression sur le commutateur
+    if (state.valid){
+      const idx = Math.min(state.commSample.re.length-1, Math.round(state.t*(state.commSample.re.length-1)));
+      const p = toPxZ(state.commSample.re[idx], state.commSample.im[idx]);
+      zCtx.fillStyle = '#E8C468';
+      zCtx.beginPath(); zCtx.arc(p.x,p.y,5,0,Math.PI*2); zCtx.fill();
+    }
+
+    // plan des racines
+    const toPxW = makeToPx(wSize, wRange);
+    drawGrid(wCtx, wSize, wRange, toPxW);
+    const o = toPxW(0,0); wCtx.fillStyle='#E8C468'; wCtx.beginPath(); wCtx.arc(o.x,o.y,2.5,0,Math.PI*2); wCtx.fill();
+
+    const listEl = document.getElementById('rootsList');
+    listEl.innerHTML = '';
+
+    if (!state.valid){
+      document.getElementById('phaseLabel').textContent = '';
+      return;
+    }
+
+    const k=state.k, n=state.theta.length;
+    const idx = Math.min(n-1, Math.round(state.t*(n-1)));
+    const stride = Math.max(1, Math.floor(idx/400));
+
+    for (let j=0;j<k;j++){
+      if (!state.visibleBranches.has(j)) continue;
+      const path = state.branchPaths[j];
+      const gp = toPxW(path.re[0], path.im[0]);
+      wCtx.strokeStyle = colorForBranch(j,k,0.6); wCtx.lineWidth=1.4;
+      wCtx.beginPath(); wCtx.arc(gp.x,gp.y,5,0,Math.PI*2); wCtx.stroke();
+
+      if (idx>0){
+        wCtx.strokeStyle = colorForBranch(j,k,0.55); wCtx.lineWidth=1.7;
+        wCtx.beginPath();
+        let p0=toPxW(path.re[0],path.im[0]); wCtx.moveTo(p0.x,p0.y);
+        for (let s=stride;s<idx;s+=stride){ const p=toPxW(path.re[s],path.im[s]); wCtx.lineTo(p.x,p.y); }
+        const pEnd=toPxW(path.re[idx],path.im[idx]); wCtx.lineTo(pEnd.x,pEnd.y);
+        wCtx.stroke();
+      }
+      const cp = toPxW(path.re[idx], path.im[idx]);
+      wCtx.fillStyle = colorForBranch(j,k,1);
+      wCtx.beginPath(); wCtx.arc(cp.x,cp.y,5.2,0,Math.PI*2); wCtx.fill();
+
+      const li=document.createElement('li');
+      const dot=document.createElement('span'); dot.className='dot'; dot.style.background=colorForBranch(j,k,1);
+      const val=document.createElement('span'); val.className='val'; val.textContent=`w${subscript(j)} = ${fmtComplex(path.re[idx],path.im[idx])}`;
+      li.appendChild(dot); li.appendChild(val); listEl.appendChild(li);
+    }
+
+    const phaseNames = ['γ1', 'γ2', 'γ1⁻¹', 'γ2⁻¹'];
+    const phase = Math.min(3, Math.floor(state.t*4));
+    document.getElementById('phaseLabel').textContent = `Étape ${phase+1}/4 : parcours de ${phaseNames[phase]}`;
+  }
+
+  /* ============================================================
+     LECTURE / SCRUB
+     ============================================================ */
+  let rafId=null;
+  const PHASE_NAMES = ['γ1', 'γ2', 'γ1⁻¹', 'γ2⁻¹'];
+
+  function upcomingPhaseIndex(t){
+    if (t >= 1 - 1e-9) return 0; // cycle terminé : le prochain appui repart de zéro
+    return Math.min(3, Math.floor(t/0.25 + 1e-9));
+  }
+  function nextQuarterTarget(t){
+    const idx = upcomingPhaseIndex(t);
+    return Math.min(1, (idx+1)*0.25);
+  }
+  function updatePlayButtonLabel(){
+    if (state.playing) return; // ne pas écraser "⏸ Pause" pendant la lecture
+    const btn = document.getElementById('playBtn');
+    if (!state.valid){ btn.textContent = '▶ Lecture'; return; }
+    const idx = upcomingPhaseIndex(state.t);
+    btn.textContent = `▶ Lecture : ${PHASE_NAMES[idx]}`;
+  }
+
+  function stopPlayback(){
+    state.playing=false;
+    if (rafId){ cancelAnimationFrame(rafId); rafId=null; }
+    updatePlayButtonLabel();
+  }
+  function startPlayback(){
+    if (!state.valid) return;
+    if (state.t >= 1 - 1e-9) state.t = 0; // un cycle complet vient de se terminer : on repart de zéro
+    const target = nextQuarterTarget(state.t);
+    if (reducedMotion){ state.t=target; updateFrame(); return; }
+
+    state.playing=true; document.getElementById('playBtn').textContent='⏸ Pause';
+    const startT = state.t;
+    const segDuration = DURATION_MS/4; // durée fixe par étape, quel que soit le point de départ dans l'étape
+    const startTime = performance.now();
+    const step=(now)=>{
+      if (!state.playing) return;
+      let frac=(now-startTime)/segDuration;
+      if (frac>=1){
+        state.t = target;
+        updateFrame();
+        stopPlayback(); // arrêt automatique : il faudra recliquer pour poursuivre
+        return;
+      }
+      state.t = startT + (target-startT)*frac;
+      updateFrame();
+      rafId=requestAnimationFrame(step);
+    };
+    rafId=requestAnimationFrame(step);
+  }
+  function updateFrame(){
+    document.getElementById('scrub').value=state.t;
+    document.getElementById('tReadout').textContent='t = '+state.t.toFixed(3);
+    redraw();
+  }
+  document.getElementById('playBtn').addEventListener('click', ()=>{
+    if (state.playing) stopPlayback();
+    else startPlayback();
+  });
+  document.getElementById('scrub').addEventListener('input', (e)=>{
+    stopPlayback(); state.t=parseFloat(e.target.value); updateFrame(); updatePlayButtonLabel();
+  });
+
+  /* ============================================================
+     INTERACTIONS
+     ============================================================ */
+  const START_GRAB_RADIUS_PX = 12;
+  let justDraggedBase=false, dragRAF=null;
+
+  function localXY(e,canvas){ const r=canvas.getBoundingClientRect(); return {x:e.clientX-r.left, y:e.clientY-r.top}; }
+  function distPx(a,b){ return Math.hypot(a.x-b.x,a.y-b.y); }
+
+  zCanvas.addEventListener('pointerdown', (e)=>{
+    const toPxZ = makeToPx(zSize, Z_RANGE);
+    const xy = localXY(e, zCanvas);
+    const basePx = toPxZ(state.base.re, state.base.im);
+    if (distPx(xy, basePx) <= START_GRAB_RADIUS_PX){
+      state.draggingBase = true;
+      zCanvas.style.cursor = 'grabbing';
+      zCanvas.setPointerCapture(e.pointerId);
+      e.preventDefault();
+    }
+  });
+  zCanvas.addEventListener('pointermove', (e)=>{
+    const toPxZ = makeToPx(zSize, Z_RANGE);
+    const xy = localXY(e, zCanvas);
+    if (state.draggingBase){
+      const fromPx = makeFromPx(zSize, Z_RANGE);
+      state.base = fromPx(xy.x, xy.y);
+      if (!dragRAF) dragRAF = requestAnimationFrame(()=>{ dragRAF=null; recomputeAll(); });
+      return;
+    }
+    const basePx = toPxZ(state.base.re, state.base.im);
+    zCanvas.style.cursor = (distPx(xy, basePx) <= START_GRAB_RADIUS_PX) ? 'grab' : 'crosshair';
+  });
+  function endDragBase(e){
+    if (state.draggingBase){
+      state.draggingBase = false; justDraggedBase = true;
+      zCanvas.style.cursor = 'crosshair';
+      if (e && e.pointerId!==undefined) zCanvas.releasePointerCapture(e.pointerId);
+      if (dragRAF){ cancelAnimationFrame(dragRAF); dragRAF=null; }
+      recomputeAll();
+    }
+  }
+  zCanvas.addEventListener('pointerup', endDragBase);
+  zCanvas.addEventListener('pointercancel', endDragBase);
+
+  zCanvas.addEventListener('click', (e)=>{
+    if (justDraggedBase){ justDraggedBase=false; return; }
+    const toPxZ = makeToPx(zSize, Z_RANGE);
+    const xy = localXY(e, zCanvas);
+    const basePx = toPxZ(state.base.re, state.base.im);
+    if (distPx(xy, basePx) <= START_GRAB_RADIUS_PX) return;
+    const fromPx = makeFromPx(zSize, Z_RANGE);
+    const z = fromPx(xy.x, xy.y);
+    if (state.mode==='g1') state.pts1.push(z); else state.pts2.push(z);
+    recomputeAll();
+  });
+
+  function setMode(mode){
+    state.mode = mode;
+    document.getElementById('tabG1').classList.toggle('active', mode==='g1');
+    document.getElementById('tabG2').classList.toggle('active', mode==='g2');
+  }
+  document.getElementById('tabG1').addEventListener('click', ()=>setMode('g1'));
+  document.getElementById('tabG2').addEventListener('click', ()=>setMode('g2'));
+
+  document.getElementById('clearG1').addEventListener('click', ()=>{ state.pts1=[]; recomputeAll(); });
+  document.getElementById('clearG2').addEventListener('click', ()=>{ state.pts2=[]; recomputeAll(); });
+
+  function setK(newK){
+    newK = Math.max(2, Math.min(6, newK));
+    if (newK===state.k) return;
+    state.k = newK;
+    document.getElementById('kVal').textContent = state.k;
+    document.getElementById('kLabel').textContent = `racine ${state.k}-ième`;
+    document.getElementById('kMinus').disabled = state.k<=2;
+    document.getElementById('kPlus').disabled = state.k>=6;
+    state.visibleBranches = new Set([...state.visibleBranches].filter(j=>j<state.k));
+    if (state.visibleBranches.size===0) state.visibleBranches.add(0);
+    rebuildRing();
+    wRange = Math.pow(4.4*Math.SQRT2, 1/state.k)*1.5;
+    if (state.valid){
+      state.branchPaths = computeBranchPaths(state.theta, state.rho, state.k);
+      updateReadouts();
+    }
+    redraw();
+  }
+  document.getElementById('kMinus').addEventListener('click', ()=>setK(state.k-1));
+  document.getElementById('kPlus').addEventListener('click', ()=>setK(state.k+1));
+
+  /* ============================================================
+     INITIALISATION
+     ============================================================ */
+  function init(){
+    zSize = zCanvas.getBoundingClientRect().width || 480;
+    wSize = wCanvas.getBoundingClientRect().width || 480;
+    zCtx = setupDPR(zCanvas, zSize);
+    wCtx = setupDPR(wCanvas, wSize);
+
+    window.addEventListener('resize', ()=>{
+      const nz=zCanvas.getBoundingClientRect().width, nw=wCanvas.getBoundingClientRect().width;
+      if (nz && Math.abs(nz-zSize)>2){ zSize=nz; zCtx=setupDPR(zCanvas,zSize); redraw(); }
+      if (nw && Math.abs(nw-wSize)>2){ wSize=nw; wCtx=setupDPR(wCanvas,wSize); redraw(); }
+    });
+
+    wRange = Math.pow(4.4*Math.SQRT2, 1/state.k)*1.5;
+    rebuildRing();
+    resetReadouts();
+    redraw();
+  }
+
+  init();
+
+})();
+</script>
+</body>
+</html>

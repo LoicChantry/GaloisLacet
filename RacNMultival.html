@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>La racine n-ième multivaluée</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --board: #16231c;
+    --board-2: #1b2b21;
+    --board-3: #203627;
+    --chalk: #EDEAE0;
+    --chalk-dim: #9FB0A6;
+    --chalk-faint: #6d7d73;
+    --accent: #E8C468;
+    --error: #D97B6C;
+    --line: rgba(237,234,224,0.12);
+    --radius: 3px;
+  }
+
+  *{ box-sizing:border-box; }
+
+  html,body{
+    margin:0; padding:0;
+    background: var(--board);
+    color: var(--chalk);
+    font-family:'IBM Plex Mono', ui-monospace, Consolas, monospace;
+  }
+
+  body{
+    min-height:100vh;
+    background-image:
+      radial-gradient(ellipse at 20% 10%, rgba(237,234,224,0.035), transparent 60%),
+      radial-gradient(ellipse at 85% 90%, rgba(237,234,224,0.03), transparent 55%);
+  }
+
+  .wrap{
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 36px 24px 56px;
+  }
+
+  header{
+    margin-bottom: 28px;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 20px;
+  }
+
+  h1{
+    font-family:'Fraunces', Georgia, serif;
+    font-weight: 600;
+    font-optical-sizing: auto;
+    font-size: clamp(1.5rem, 2.4vw, 2.05rem);
+    margin: 0 0 8px;
+    letter-spacing: -0.01em;
+    color: var(--chalk);
+  }
+  h1 .accent-word{ color: var(--accent); font-style: italic; font-weight: 500; }
+
+  header p{ margin: 0; color: var(--chalk-dim); font-size: 0.92rem; line-height: 1.55; }
+  header p + p{ margin-top: 10px; }
+  header var{ font-style: normal; font-family:'IBM Plex Mono', monospace; color: var(--chalk); font-weight: 600; }
+  header ul{ margin: 10px 0 0; padding-left: 1.2em; color: var(--chalk-dim); font-size: 0.88rem; line-height: 1.6; }
+  header li b{ color: var(--chalk); font-weight: 600; }
+  header .caveat{
+    margin-top: 12px;
+    padding: 10px 12px;
+    background: var(--board-3);
+    border-left: 3px solid var(--accent);
+    border-radius: var(--radius);
+    font-size: 0.84rem;
+    color: var(--chalk-dim);
+  }
+
+  .layout{
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    gap: 22px;
+    align-items: start;
+  }
+  @media (max-width: 820px){ .layout{ grid-template-columns: 1fr; } }
+
+  .panel{
+    background: var(--board-2);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 18px 18px 20px;
+  }
+  .panel-title{ font-family:'Fraunces', Georgia, serif; font-size: 0.98rem; font-weight: 600; color: var(--chalk); margin: 0 0 4px; }
+  .panel-sub{ font-size: 0.74rem; color: var(--chalk-faint); margin: 0 0 14px; line-height:1.5; }
+
+  .n-row{ display:flex; align-items:center; gap:14px; margin-bottom: 16px; }
+  .n-stepper{ display:flex; align-items:center; border: 1px solid var(--line); border-radius: var(--radius); overflow:hidden; }
+  .n-stepper button{
+    background: var(--board-3); border: none; color: var(--chalk);
+    width: 30px; height: 30px; font-family:'IBM Plex Mono', monospace; font-size: 1rem; cursor: pointer;
+    transition: background .15s ease;
+  }
+  .n-stepper button:hover{ background:#2a4433; }
+  .n-stepper button:disabled{ opacity:.3; cursor:not-allowed; }
+  .n-stepper .n-val{ width: 44px; text-align:center; font-size: 1rem; font-weight:600; }
+  .n-label{ font-size: 0.74rem; color: var(--chalk-dim); line-height:1.4; }
+  .n-label b{ color: var(--chalk); font-weight:600; }
+
+  .ring-box{ display:flex; align-items:center; gap:16px; margin-bottom: 18px; padding: 10px 4px 14px; border-bottom: 1px dashed var(--line); }
+  .ring{ position:relative; width: 76px; height:76px; flex: 0 0 auto; }
+  .ring::before{ content:""; position:absolute; inset:0; border-radius:50%; border: 1px dashed var(--chalk-faint); opacity:.55; }
+  .ring-dot{ position:absolute; width:11px; height:11px; border-radius:50%; top:50%; left:50%; margin:-5.5px 0 0 -5.5px; box-shadow: 0 0 0 2px rgba(22,35,28,0.9); }
+  .ring-caption{ font-size: 0.7rem; color: var(--chalk-faint); line-height:1.5; }
+
+  .roots-list{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:6px; }
+  .roots-list li{ display:flex; align-items:center; gap:9px; font-size: 0.78rem; color: var(--chalk-dim); }
+  .dot{ width:9px; height:9px; border-radius:50%; flex: 0 0 auto; }
+  .roots-list .val{ color: var(--chalk); }
+
+  .canvases{ display:grid; grid-template-columns: 1fr 1fr; gap: 22px; }
+  @media (max-width: 720px){ .canvases{ grid-template-columns: 1fr; } }
+  .canvas-box canvas{
+    display:block; width:100%; aspect-ratio: 1/1;
+    background: var(--board); border: 1px solid var(--line); border-radius: var(--radius);
+    cursor: crosshair; touch-action: none;
+  }
+  .canvas-caption{ font-size: 0.72rem; color: var(--chalk-faint); margin: 8px 0 0; text-align:center; line-height:1.4; }
+
+  .status{ min-height: 1.3em; font-size: 0.78rem; margin-top: 14px; }
+  .status.info{ color: var(--chalk-faint); }
+  .status.warn{ color: var(--accent); }
+
+  footer{ margin-top: 30px; padding-top: 16px; border-top: 1px solid var(--line); font-size: 0.72rem; color: var(--chalk-faint); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>La racine <span class="accent-word">n</span>-ième multivaluée</h1>
+    <p>
+      Pour <var>z</var> ≠ 0 fixé, l'ensemble <var>\sqrt[{n}]{z}</var> compte <var>n</var> valeurs, réparties
+      cycliquement. Cet outil affiche, pour un point <var>z</var> que vous déplacez librement, ses
+      <var>n</var> racines <var>n</var>-ièmes selon la détermination canonique (argument choisi dans [0, 2π[) — une couleur par détermination.
+    </p>
+    <p>Avec cet outil, vous pouvez :</p>
+    <ul>
+      <li><b>choisir n</b> (de 2 à 6) au sélecteur ;</li>
+      <li><b>déplacer z</b> librement dans le plan de gauche (cliquer-glisser, ou simplement cliquer ailleurs) ;</li>
+      <li><b>observer les n racines</b> se déplacer dans le plan de droite, chacune laissant une traînée colorée qui s'efface en 3,5 secondes.</li>
+    </ul>
+    <p class="caveat">
+      Faites traverser à <var>z</var> l'axe réel positif (la coupure de la détermination canonique) : les couleurs
+      des racines <em>sautent</em> d'une position à l'autre, alors que l'ensemble des racines, lui, se déplace
+      continûment. Ce n'est pas un défaut de l'outil : c'est exactement la discontinuité de la détermination
+      canonique décrite dans le texte — et la raison pour laquelle un <em>suivi continu le long d'un chemin</em>
+      (voir l'autre applet, sur le redressement) demande un traitement différent.
+    </p>
+  </header>
+
+  <div class="layout">
+
+    <section class="panel">
+      <p class="panel-title">Déterminations</p>
+      <p class="panel-sub">Une couleur par racine n-ième, réparties cycliquement.</p>
+
+      <div class="n-row">
+        <div class="n-stepper">
+          <button id="nMinus" type="button" aria-label="Diminuer n">−</button>
+          <span class="n-val" id="nVal">2</span>
+          <button id="nPlus" type="button" aria-label="Augmenter n">+</button>
+        </div>
+        <div class="n-label">ordre de la racine<br><b id="nLabel">n = 2</b></div>
+      </div>
+
+      <div class="ring-box">
+        <div class="ring" id="ring"></div>
+        <p class="ring-caption">Les n secteurs de 360°/n, dans l'ordre cyclique de ζ<sub>n</sub>.</p>
+      </div>
+
+      <ul class="roots-list" id="rootsList"></ul>
+    </section>
+
+    <section class="panel">
+      <div class="canvases">
+        <div class="canvas-box">
+          <canvas id="zCanvas" width="480" height="480"></canvas>
+          <p class="canvas-caption">Plan de départ — z (glissez ou cliquez pour le déplacer)</p>
+        </div>
+        <div class="canvas-box">
+          <canvas id="wCanvas" width="480" height="480"></canvas>
+          <p class="canvas-caption">Racines n-ièmes de z (détermination canonique)</p>
+        </div>
+      </div>
+      <p class="status info" id="status">Cliquez ou glissez dans le plan de gauche pour déplacer z.</p>
+    </section>
+
+  </div>
+
+  <footer>
+    Instrument pédagogique associé à la sous-section sur les racines n-ièmes multivaluées.
+    Fonctionne hors-ligne — ce fichier est autonome.
+  </footer>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ============================================================
+     ÉTAT GLOBAL
+     ============================================================ */
+  const state = {
+    n: 2,
+    z: {re: 2.0, im: 0.8},
+    dragging: false,
+    leftTrail: [],       // {re,im,t}
+    rightTrails: [],     // tableau de n tableaux de {re,im,t}
+  };
+
+  const EPS_ZERO = 0.12;      // rayon de la zone interdite autour de 0
+  const FADE_MS = 3500;       // durée de rémanence
+  const Z_RANGE = 4.4;
+  const ROOTS_RANGE = 3.0;    // suffisant pour tout n dans [2,6] avec |z|<=~6.2
+
+  function colorForBranch(j,n,alpha){
+    const h = Math.round(j*360/n);
+    return `hsla(${h}, 62%, 66%, ${alpha===undefined?1:alpha})`;
+  }
+
+  function fmtComplex(re, im){
+    const a = (Math.abs(re) < 0.005 ? 0 : re).toFixed(2);
+    const b = Math.abs(im);
+    const sign = im < -0.0049 ? '−' : '+';
+    return `${a} ${sign} ${b.toFixed(2)}i`;
+  }
+
+  function computeRoots(z, n){
+    const rho = Math.hypot(z.re, z.im);
+    let theta = Math.atan2(z.im, z.re);
+    if (theta < 0) theta += 2*Math.PI; // convention canonique : theta in [0,2*pi[
+    const r = Math.pow(rho, 1/n);
+    const roots = [];
+    for (let j=0;j<n;j++){
+      const ang = (theta + 2*Math.PI*j)/n;
+      roots.push({re: r*Math.cos(ang), im: r*Math.sin(ang)});
+    }
+    return roots;
+  }
+
+  /* ============================================================
+     CANVAS
+     ============================================================ */
+  const zCanvas = document.getElementById('zCanvas');
+  const wCanvas = document.getElementById('wCanvas');
+  let zSize=480, wSize=480;
+
+  function setupDPR(canvas, size){
+    const dpr = window.devicePixelRatio||1;
+    canvas.width = size*dpr; canvas.height = size*dpr;
+    canvas.style.width=size+'px'; canvas.style.height=size+'px';
+    const ctx = canvas.getContext('2d');
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    return ctx;
+  }
+  let zCtx = setupDPR(zCanvas, zSize);
+  let wCtx = setupDPR(wCanvas, wSize);
+
+  function makeToPx(size, range){
+    return (re,im)=>({ x: size/2 + re*(size/(2*range)), y: size/2 - im*(size/(2*range)) });
+  }
+  function makeFromPx(size, range){
+    return (x,y)=>({ re: (x-size/2)/(size/(2*range)), im: (size/2-y)/(size/(2*range)) });
+  }
+
+  function drawGrid(ctx, size, range, toPx){
+    ctx.clearRect(0,0,size,size);
+    ctx.strokeStyle = 'rgba(159,176,166,0.16)';
+    ctx.lineWidth = 1;
+    let step = range/8;
+    const mag = Math.pow(10, Math.floor(Math.log10(step||1)));
+    step = Math.ceil(step/mag)*mag || 1;
+    for (let g=-Math.ceil(range/step)*step; g<=range; g+=step){
+      const p1=toPx(g,-range), p2=toPx(g,range);
+      ctx.beginPath(); ctx.moveTo(p1.x+0.5,p1.y); ctx.lineTo(p2.x+0.5,p2.y); ctx.stroke();
+      const p3=toPx(-range,g), p4=toPx(range,g);
+      ctx.beginPath(); ctx.moveTo(p3.x,p3.y+0.5); ctx.lineTo(p4.x,p4.y+0.5); ctx.stroke();
+    }
+    ctx.strokeStyle='rgba(237,234,224,0.32)'; ctx.lineWidth=1.2;
+    const o1=toPx(-range,0), o2=toPx(range,0);
+    ctx.beginPath(); ctx.moveTo(o1.x,o1.y); ctx.lineTo(o2.x,o2.y); ctx.stroke();
+    const o3=toPx(0,-range), o4=toPx(0,range);
+    ctx.beginPath(); ctx.moveTo(o3.x,o3.y); ctx.lineTo(o4.x,o4.y); ctx.stroke();
+  }
+
+  function drawForbiddenZone(ctx, toPx, color){
+    const c = toPx(0,0);
+    const rPx = toPx(EPS_ZERO,0).x - toPx(0,0).x;
+    ctx.save();
+    ctx.setLineDash([3,4]);
+    ctx.strokeStyle = color;
+    ctx.globalAlpha = 0.7;
+    ctx.lineWidth = 1.3;
+    ctx.beginPath();
+    ctx.arc(c.x, c.y, Math.abs(rPx), 0, Math.PI*2);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawTrail(ctx, toPx, trail, colorFn, now){
+    for (let i=0;i<trail.length;i++){
+      const age = now - trail[i].t;
+      if (age >= FADE_MS) continue;
+      const life = 1 - age/FADE_MS; // 1 -> neuf, 0 -> disparu
+      const p = toPx(trail[i].re, trail[i].im);
+      ctx.fillStyle = colorFn(life);
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 2 + 2.5*life, 0, Math.PI*2);
+      ctx.fill();
+    }
+  }
+
+  /* ============================================================
+     RING LEGEND
+     ============================================================ */
+  function rebuildRing(){
+    const ring = document.getElementById('ring');
+    ring.innerHTML = '';
+    const R = 30;
+    for (let j=0;j<state.n;j++){
+      const angle = (j/state.n)*2*Math.PI - Math.PI/2;
+      const dot = document.createElement('div');
+      dot.className = 'ring-dot';
+      dot.style.background = colorForBranch(j,state.n,1);
+      dot.style.transform = `translate(${Math.cos(angle)*R}px, ${Math.sin(angle)*R}px)`;
+      dot.title = `détermination j=${j}`;
+      ring.appendChild(dot);
+    }
+  }
+
+  /* ============================================================
+     BOUCLE DE RENDU / RÉMANENCE
+     ============================================================ */
+  let rafId = null;
+
+  function pruneTrail(trail, now){
+    while (trail.length && now - trail[0].t > FADE_MS) trail.shift();
+  }
+
+  function ensureLoopRunning(){
+    if (rafId) return;
+    rafId = requestAnimationFrame(tick);
+  }
+
+  function tick(){
+    const now = performance.now();
+
+    if (state.dragging){
+      state.leftTrail.push({re: state.z.re, im: state.z.im, t: now});
+      const roots = computeRoots(state.z, state.n);
+      for (let j=0;j<state.n;j++){
+        state.rightTrails[j].push({re: roots[j].re, im: roots[j].im, t: now});
+      }
+    }
+
+    pruneTrail(state.leftTrail, now);
+    for (let j=0;j<state.rightTrails.length;j++) pruneTrail(state.rightTrails[j], now);
+
+    redraw(now);
+
+    const stillFading = state.leftTrail.length>0 || state.rightTrails.some(t=>t.length>0);
+    if (state.dragging || stillFading){
+      rafId = requestAnimationFrame(tick);
+    } else {
+      rafId = null;
+    }
+  }
+
+  function redraw(now){
+    now = now===undefined ? performance.now() : now;
+
+    // --- plan z ---
+    const toPxZ = makeToPx(zSize, Z_RANGE);
+    drawGrid(zCtx, zSize, Z_RANGE, toPxZ);
+    drawForbiddenZone(zCtx, toPxZ, '#E8C468');
+    drawTrail(zCtx, toPxZ, state.leftTrail, (life)=>`rgba(159,176,166,${0.55*life})`, now);
+
+    const pz = toPxZ(state.z.re, state.z.im);
+    zCtx.fillStyle = '#0c1510';
+    zCtx.strokeStyle = '#EDEAE0';
+    zCtx.lineWidth = 1.6;
+    zCtx.beginPath(); zCtx.arc(pz.x,pz.y,6,0,Math.PI*2); zCtx.fill(); zCtx.stroke();
+
+    // --- plan des racines ---
+    const toPxW = makeToPx(wSize, ROOTS_RANGE);
+    drawGrid(wCtx, wSize, ROOTS_RANGE, toPxW);
+    const o = toPxW(0,0);
+    wCtx.fillStyle = '#E8C468';
+    wCtx.beginPath(); wCtx.arc(o.x,o.y,2.5,0,Math.PI*2); wCtx.fill();
+
+    const roots = computeRoots(state.z, state.n);
+    const listEl = document.getElementById('rootsList');
+    listEl.innerHTML = '';
+    for (let j=0;j<state.n;j++){
+      drawTrail(wCtx, toPxW, state.rightTrails[j], (life)=>colorForBranch(j,state.n,0.6*life), now);
+      const p = toPxW(roots[j].re, roots[j].im);
+      wCtx.fillStyle = colorForBranch(j,state.n,1);
+      wCtx.beginPath(); wCtx.arc(p.x,p.y,5.2,0,Math.PI*2); wCtx.fill();
+
+      const li = document.createElement('li');
+      const dot = document.createElement('span');
+      dot.className = 'dot';
+      dot.style.background = colorForBranch(j,state.n,1);
+      const val = document.createElement('span');
+      val.className = 'val';
+      val.textContent = `w${subscript(j)} = ${fmtComplex(roots[j].re, roots[j].im)}`;
+      li.appendChild(dot); li.appendChild(val);
+      listEl.appendChild(li);
+    }
+  }
+
+  function subscript(j){
+    const map = ['₀','₁','₂','₃','₄','₅','₆','₇','₈','₉'];
+    return String(j).split('').map(d=>map[+d]).join('');
+  }
+
+  /* ============================================================
+     INTERACTIONS
+     ============================================================ */
+  function localXY(e, canvas){
+    const rect = canvas.getBoundingClientRect();
+    return { x: e.clientX-rect.left, y: e.clientY-rect.top };
+  }
+
+  function setStatus(msg, kind){
+    const el = document.getElementById('status');
+    el.textContent = msg;
+    el.className = 'status ' + (kind||'info');
+  }
+
+  function updateZFromEvent(e){
+    const xy = localXY(e, zCanvas);
+    const from = makeFromPx(zSize, Z_RANGE);
+    const z = from(xy.x, xy.y);
+    if (Math.hypot(z.re, z.im) < EPS_ZERO){
+      setStatus('z ne peut pas être nul — la racine n-ième n\'y est pas définie.', 'warn');
+      return;
+    }
+    setStatus('Cliquez ou glissez dans le plan de gauche pour déplacer z.', 'info');
+    state.z = z;
+  }
+
+  zCanvas.addEventListener('pointerdown', (e)=>{
+    state.dragging = true;
+    zCanvas.setPointerCapture(e.pointerId);
+    zCanvas.style.cursor = 'grabbing';
+    updateZFromEvent(e);
+    ensureLoopRunning();
+    e.preventDefault();
+  });
+  zCanvas.addEventListener('pointermove', (e)=>{
+    if (!state.dragging) return;
+    updateZFromEvent(e);
+  });
+  function endDrag(e){
+    if (!state.dragging) return;
+    state.dragging = false;
+    zCanvas.style.cursor = 'crosshair';
+    if (e && e.pointerId !== undefined) zCanvas.releasePointerCapture(e.pointerId);
+    ensureLoopRunning();
+  }
+  zCanvas.addEventListener('pointerup', endDrag);
+  zCanvas.addEventListener('pointercancel', endDrag);
+
+  function setN(newN){
+    newN = Math.max(2, Math.min(6, newN));
+    if (newN === state.n) return;
+    state.n = newN;
+    document.getElementById('nVal').textContent = state.n;
+    document.getElementById('nLabel').textContent = `n = ${state.n}`;
+    document.getElementById('nMinus').disabled = state.n <= 2;
+    document.getElementById('nPlus').disabled = state.n >= 6;
+    state.rightTrails = Array.from({length: state.n}, ()=>[]);
+    rebuildRing();
+    ensureLoopRunning();
+    redraw();
+  }
+  document.getElementById('nMinus').addEventListener('click', ()=>setN(state.n-1));
+  document.getElementById('nPlus').addEventListener('click', ()=>setN(state.n+1));
+
+  /* ============================================================
+     INITIALISATION
+     ============================================================ */
+  function init(){
+    zSize = zCanvas.getBoundingClientRect().width || 480;
+    wSize = wCanvas.getBoundingClientRect().width || 480;
+    zCtx = setupDPR(zCanvas, zSize);
+    wCtx = setupDPR(wCanvas, wSize);
+
+    window.addEventListener('resize', ()=>{
+      const nz = zCanvas.getBoundingClientRect().width;
+      const nw = wCanvas.getBoundingClientRect().width;
+      if (nz && Math.abs(nz-zSize)>2){ zSize=nz; zCtx=setupDPR(zCanvas,zSize); redraw(); }
+      if (nw && Math.abs(nw-wSize)>2){ wSize=nw; wCtx=setupDPR(wCanvas,wSize); redraw(); }
+    });
+
+    state.rightTrails = Array.from({length: state.n}, ()=>[]);
+    rebuildRing();
+    redraw();
+  }
+
+  init();
+
+})();
+</script>
+</body>
+</html>

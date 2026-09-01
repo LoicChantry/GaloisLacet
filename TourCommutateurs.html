@@ -1,0 +1,1360 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>La tour de commutateurs et son image</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --board: #16231c;
+    --board-2: #1b2b21;
+    --board-3: #203627;
+    --chalk: #EDEAE0;
+    --chalk-dim: #9FB0A6;
+    --chalk-faint: #6d7d73;
+    --accent: #E8C468;
+    --error: #D97B6C;
+    --ok: #8fbf9a;
+    --line: rgba(237,234,224,0.12);
+    --radius: 3px;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; background: var(--board); color: var(--chalk); font-family:'IBM Plex Mono', ui-monospace, Consolas, monospace; }
+  body{
+    min-height:100vh;
+    background-image:
+      radial-gradient(ellipse at 20% 10%, rgba(237,234,224,0.035), transparent 60%),
+      radial-gradient(ellipse at 85% 90%, rgba(237,234,224,0.03), transparent 55%);
+  }
+  .wrap{ max-width: 1240px; margin: 0 auto; padding: 36px 24px 56px; }
+
+  h1{
+    font-family:'Fraunces', Georgia, serif; font-weight: 600; font-optical-sizing: auto;
+    font-size: clamp(1.5rem, 2.4vw, 2.05rem); margin: 0 0 8px; letter-spacing: -0.01em; color: var(--chalk);
+  }
+  h1 .accent-word{ color: var(--accent); font-style: italic; font-weight: 500; }
+  header{ margin:0; }
+  header p{ margin: 0; color: var(--chalk-dim); font-size: 0.92rem; line-height: 1.55; }
+  header p + p{ margin-top: 10px; }
+  header var{ font-style: normal; font-family:'IBM Plex Mono', monospace; color: var(--chalk); font-weight: 600; }
+  header ul{ margin: 10px 0 0; padding-left: 1.2em; color: var(--chalk-dim); font-size: 0.88rem; line-height: 1.6; }
+  header li b{ color: var(--chalk); font-weight: 600; }
+  header .caveat{
+    margin-top: 12px; padding: 10px 12px; background: var(--board-3);
+    border-left: 3px solid var(--accent); border-radius: var(--radius);
+    font-size: 0.84rem; color: var(--chalk-dim);
+  }
+
+  .top-grid{
+    display: grid; grid-template-columns: 1fr 320px; gap: 22px; align-items: start;
+    margin-bottom: 28px; border-bottom: 1px solid var(--line); padding-bottom: 20px;
+  }
+  @media (max-width: 900px){ .top-grid{ grid-template-columns: 1fr; } }
+
+  .panel{ background: var(--board-2); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px 18px 20px; margin-bottom: 22px; }
+  .panel-title{ font-family:'Fraunces', Georgia, serif; font-size: 0.98rem; font-weight: 600; color: var(--chalk); margin: 0 0 4px; }
+  .panel-sub{ font-size: 0.74rem; color: var(--chalk-faint); margin: 0 0 14px; line-height:1.5; }
+
+  .n-row{ display:flex; align-items:center; gap:14px; margin-bottom: 16px; }
+  .n-stepper{ display:flex; align-items:center; border: 1px solid var(--line); border-radius: var(--radius); overflow:hidden; }
+  .n-stepper button{ background: var(--board-3); border: none; color: var(--chalk); width: 30px; height: 30px; font-family:'IBM Plex Mono', monospace; font-size: 1rem; cursor: pointer; transition: background .15s ease; }
+  .n-stepper button:hover{ background:#2a4433; }
+  .n-stepper button:disabled{ opacity:.3; cursor:not-allowed; }
+  .n-stepper .n-val{ width: 40px; text-align:center; font-size: 1rem; font-weight:600; }
+  .n-label{ font-size: 0.74rem; color: var(--chalk-dim); line-height:1.4; }
+  .n-label b{ color: var(--chalk); font-weight:600; }
+
+  .field{ margin-bottom: 14px; }
+  .field label{ display:block; font-size: 0.72rem; color: var(--chalk-faint); margin-bottom: 6px; }
+  .field input[type=text]{
+    width: 100%; font-family:'IBM Plex Mono', monospace; font-size: 0.9rem; color: var(--chalk);
+    background: var(--board-3); border: 1px solid var(--line); border-radius: var(--radius); padding: 9px 11px;
+  }
+  .field input:focus-visible{ outline: 2px solid var(--accent); outline-offset: 1px; }
+
+  button.btn{
+    font-family:'IBM Plex Mono', monospace; font-size: 0.78rem; font-weight: 500; color: var(--chalk);
+    background: var(--board-3); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 9px 14px; cursor: pointer; transition: background .15s ease, border-color .15s ease, opacity .15s ease;
+  }
+  button.btn:hover:not(:disabled){ background:#2a4433; border-color: var(--chalk-faint); }
+  button.btn:disabled{ opacity:.35; cursor:not-allowed; }
+  button.btn.primary{ background:#35543f; border-color:#3f6b4a; }
+  button.btn.primary:hover:not(:disabled){ background:#3d6248; }
+  button.btn:focus-visible{ outline: 2px solid var(--accent); outline-offset: 2px; }
+  button.btn.mode-tab.active{ background:#35543f; border-color: var(--accent); color: var(--chalk); }
+
+  .btnrow{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom: 4px; }
+
+  .status{ min-height: 1.3em; font-size: 0.78rem; margin-top: 10px; line-height:1.4; }
+  .status.error{ color: var(--error); }
+  .status.info{ color: var(--chalk-faint); }
+  .status.ok{ color: var(--ok); }
+
+  .canvases{ display:grid; grid-template-columns: 1fr 1fr; gap: 22px; }
+  @media (max-width: 780px){ .canvases{ grid-template-columns: 1fr; } }
+  .canvas-box canvas{
+    display:block; width:100%; aspect-ratio: 1/1; background: var(--board);
+    border: 1px solid var(--line); border-radius: var(--radius); cursor: crosshair; touch-action:none;
+  }
+  .canvas-caption{ font-size: 0.72rem; color: var(--chalk-faint); margin: 8px 0 0; text-align:center; line-height:1.4; }
+
+  .scrub-row{ display:flex; align-items:center; gap:12px; margin: 16px 0 6px; }
+  .scrub-row input[type=range]{ flex:1; accent-color: var(--accent); }
+  .phase-label{ font-size: 0.8rem; color: var(--chalk); text-align:center; margin-bottom: 4px; min-height:1.4em; }
+  .t-readout{ font-size: 0.76rem; color: var(--chalk-dim); width: 92px; text-align:right; }
+
+  .readouts{ display:grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 16px; }
+  @media (max-width: 780px){ .readouts{ grid-template-columns: 1fr; } }
+  .readout-card{ background: var(--board-3); border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 12px; }
+  .readout-card .rc-label{ font-size: 0.66rem; color: var(--chalk-faint); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.04em; }
+  .readout-card .rc-value{ font-size: 1.0rem; color: var(--chalk); font-weight: 600; }
+  .readout-card.ok .rc-value{ color: var(--ok); }
+
+  .roots-legend{ display:flex; flex-wrap:wrap; gap: 10px 16px; margin-top: 14px; }
+  .roots-legend .item{ display:flex; align-items:center; gap:7px; font-size: 0.76rem; color: var(--chalk-dim); }
+  .dot{ width:9px; height:9px; border-radius:50%; flex:0 0 auto; }
+
+  footer{ margin-top: 10px; padding-top: 16px; border-top: 1px solid var(--line); font-size: 0.72rem; color: var(--chalk-faint); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="top-grid">
+    <header>
+      <h1>La tour de commutateurs et son <span class="accent-word">image</span></h1>
+      <p>
+        À un chemin permutant <var>Γ</var> dans l'espace des racines correspond, via <var>C</var><sub>n</sub><sup>sym</sup>,
+        un lacet <var>γ</var> dans l'espace des coefficients. Cet outil rend cette correspondance manipulable :
+        déplacez les racines, construisez un commutateur — à l'étage 1 directement, ou à un étage plus profond
+        en ciblant un 3-cycle — et observez-le se dérouler des deux côtés à la fois.
+      </p>
+      <p>Avec cet outil, vous pouvez :</p>
+      <ul>
+        <li><b>choisir n</b> (de 2 à 6) et <b>déplacer les racines</b> librement dans le plan de gauche ;</li>
+        <li><b>en mode « Libre »</b>, saisir deux permutations quelconques (par exemple <var>(1 2 3)</var> et <var>(3 4 5)</var>) — l'outil construit leurs chemins permutants (par concaténation de transpositions élémentaires) et leur commutateur ; ce n'est un authentique élément d'étage 1 de la tour que si les deux permutations saisies sont elles-mêmes des transpositions simples (par exemple <var>(1 2)</var> et <var>(3 4)</var>) — sinon, c'est le commutateur de deux chemins permutants quelconques, une construction plus générale ;</li>
+        <li><b>en mode « Cible + étage »</b>, viser directement un 3-cycle (par exemple <var>1 2 3</var>) à un étage choisi (jusqu'à 6) — l'outil reproduit la construction récursive du corollaire : à chaque étage, deux indices frais sont choisis pour bâtir un commutateur de commutateurs qui réalise toujours exactement ce même 3-cycle ;</li>
+        <li><b>animer le commutateur</b> et observer, simultanément, les racines qui s'échangent à gauche et les coefficients qui décrivent un lacet à droite — l'indice du discriminant, affiché en direct, reste nul quel que soit l'étage atteint.</li>
+      </ul>
+      <p class="caveat">
+        Plus l'étage grandit, plus le commutateur enchaîne de transpositions élémentaires (4 par étage franchi) : la durée
+        de lecture et la densité de la traînée des coefficients quadruplent donc automatiquement à chaque étage, pour que
+        l'animation reste lisible et que la continuité du lacet ne semble jamais douteuse par manque de points.
+      </p>
+    </header>
+
+    <aside class="panel" style="margin-bottom:0;">
+      <p class="panel-title">Réglages</p>
+      <p class="panel-sub">Nombre de racines et construction du commutateur.</p>
+
+      <div class="n-row">
+        <div class="n-stepper">
+          <button id="nMinus" type="button" aria-label="Diminuer n">−</button>
+          <span class="n-val" id="nVal">5</span>
+          <button id="nPlus" type="button" aria-label="Augmenter n">+</button>
+        </div>
+        <div class="n-label">nombre de racines<br><b id="nLabel">n = 5</b></div>
+      </div>
+
+      <div class="mode-tabs" style="display:flex; gap:8px; margin-bottom:14px;">
+        <button class="btn mode-tab active" id="tabFree" type="button" style="flex:1;">Libre</button>
+        <button class="btn mode-tab" id="tabTarget" type="button" style="flex:1;">Cible + étage</button>
+      </div>
+
+      <div id="freeFields">
+        <div class="field">
+          <label for="perm1Input">Permutation Γ₁ (ex : (1 2 3))</label>
+          <input type="text" id="perm1Input" value="(1 2 3)" autocomplete="off" spellcheck="false">
+        </div>
+        <div class="field">
+          <label for="perm2Input">Permutation Γ₂ (ex : (3 4 5))</label>
+          <input type="text" id="perm2Input" value="(3 4 5)" autocomplete="off" spellcheck="false">
+        </div>
+      </div>
+
+      <div id="targetFields" style="display:none;">
+        <div class="field">
+          <label for="targetInput">3-cycle cible (ex : 1 2 3)</label>
+          <input type="text" id="targetInput" value="1 2 3" autocomplete="off" spellcheck="false">
+        </div>
+        <div class="n-row" style="margin-bottom:14px;">
+          <div class="n-stepper">
+            <button id="stageMinus" type="button" aria-label="Diminuer l'étage">−</button>
+            <span class="n-val" id="stageVal">1</span>
+            <button id="stagePlus" type="button" aria-label="Augmenter l'étage">+</button>
+          </div>
+          <div class="n-label">étage de la tour<br><b id="stageLabel">étage 1</b></div>
+        </div>
+        <p class="panel-sub" style="margin-top:-6px;">
+          Construit récursivement, comme dans le corollaire : ℓ,m sont les deux plus petits indices frais hors {i,j,k}. Nécessite n ≥ 5.
+        </p>
+      </div>
+
+      <div class="btnrow">
+        <button class="btn" id="resetRoots" type="button">Réinitialiser les racines</button>
+      </div>
+      <p class="status info" id="status">Construisez le commutateur pour l'animer.</p>
+    </aside>
+  </div>
+
+  <section class="panel">
+    <div class="canvases">
+      <div class="canvas-box">
+        <canvas id="rootsCanvas" width="520" height="520"></canvas>
+        <p class="canvas-caption">Espace des racines — Γ₁, Γ₂ et leur commutateur</p>
+      </div>
+      <div class="canvas-box">
+        <canvas id="coefCanvas" width="520" height="520"></canvas>
+        <p class="canvas-caption">Espace des coefficients — image par C<sub>n</sub><sup>sym</sup></p>
+      </div>
+    </div>
+
+    <div class="scrub-row">
+      <button class="btn primary" id="playBtn" type="button" disabled>▶ Lecture</button>
+      <input type="range" id="scrub" min="0" max="1" step="0.001" value="0" disabled>
+      <span class="t-readout" id="tReadout">t = 0.000</span>
+    </div>
+    <p class="phase-label" id="phaseLabel"></p>
+
+    <div class="readouts">
+      <div class="readout-card">
+        <div class="rc-label">permutation de Γ₁</div>
+        <div class="rc-value" id="permInfo1">—</div>
+      </div>
+      <div class="readout-card">
+        <div class="rc-label">permutation de Γ₂</div>
+        <div class="rc-value" id="permInfo2">—</div>
+      </div>
+      <div class="readout-card ok">
+        <div class="rc-label">indice du discriminant, sur [Γ₁,Γ₂]</div>
+        <div class="rc-value" id="discIndex">—</div>
+      </div>
+    </div>
+
+    <div class="roots-legend" id="rootsLegend"></div>
+  </section>
+
+  <section class="panel">
+    <p class="panel-title">Expression par radicaux</p>
+    <p class="panel-sub">Suivi continu de R(γ(t)) le long du commutateur — chaque détermination initiale trace sa propre trajectoire.</p>
+
+    <div class="btnrow" style="margin-bottom:10px;">
+      <button class="btn expr-tpl active" id="tplQuad" type="button">Quadratique (n=2)</button>
+      <button class="btn expr-tpl" id="tplCardan" type="button">Viète-Cardan (n=3)</button>
+      <button class="btn expr-tpl" id="tplFree" type="button">Libre</button>
+    </div>
+    <div class="field">
+      <label for="exprInput">Expression R(a) — coefficients a0,a1,…, syntaxe (expr)^(1/k) pour un radical, "let w = … in …" pour partager une détermination</label>
+      <input type="text" id="exprInput" value="-a1/2 + (a1^2/4 - a0)^(1/2)" autocomplete="off" spellcheck="false">
+    </div>
+    <div class="btnrow">
+      <button class="btn primary" id="exprBuildBtn" type="button">Suivre cette expression</button>
+    </div>
+    <p class="status info" id="exprStatus">Sélectionnez un modèle ou entrez une expression, puis cliquez « Suivre ».</p>
+
+    <div class="canvas-box" style="max-width:520px; margin-top:14px;">
+      <canvas id="exprCanvas" width="520" height="520"></canvas>
+      <p class="canvas-caption">Espace image de R — fantômes numérotés des déterminations initiales, tracées par continuité</p>
+    </div>
+    <div class="roots-legend" id="exprLegend"></div>
+  </section>
+
+  <footer>
+    Instrument pédagogique associé à la sous-section sur la tour de commutateurs.
+    Fonctionne hors-ligne — ce fichier est autonome.
+  </footer>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ============================================================
+     ARITHMÉTIQUE COMPLEXE
+     ============================================================ */
+  const C = {
+    add:(a,b)=>({re:a.re+b.re, im:a.im+b.im}),
+    sub:(a,b)=>({re:a.re-b.re, im:a.im-b.im}),
+    mul:(a,b)=>({re:a.re*b.re-a.im*b.im, im:a.re*b.im+a.im*b.re}),
+    div:(a,b)=>{ const d=b.re*b.re+b.im*b.im; if(d===0) return {re:NaN,im:NaN}; return {re:(a.re*b.re+a.im*b.im)/d, im:(a.im*b.re-a.re*b.im)/d}; },
+    neg:(a)=>({re:-a.re, im:-a.im}),
+    abs:(a)=>Math.hypot(a.re,a.im),
+    scale:(a,s)=>({re:a.re*s, im:a.im*s}),
+  };
+
+  function hueForIndex(i,n){ return Math.round(i*360/n); }
+  function colorForIndex(i,n,alpha){ return `hsla(${hueForIndex(i,n)}, 62%, 66%, ${alpha===undefined?1:alpha})`; }
+
+  /* ============================================================
+     FORMULES DE VIÈTE
+     ============================================================ */
+  function vieteCoeffs(roots){
+    let poly = [{re:1,im:0}];
+    for (const Z of roots){
+      const newPoly = new Array(poly.length+1).fill(null).map(()=>({re:0,im:0}));
+      for (let k=0;k<poly.length;k++){
+        newPoly[k+1] = C.add(newPoly[k+1], poly[k]);
+        newPoly[k] = C.add(newPoly[k], C.mul(C.neg(Z), poly[k]));
+      }
+      poly = newPoly;
+    }
+    return poly.slice(0, poly.length-1); // [a_0,...,a_{n-1}]
+  }
+
+  function discriminant(roots){
+    let d = {re:1,im:0};
+    for (let i=0;i<roots.length;i++){
+      for (let j=i+1;j<roots.length;j++){
+        const diff = C.sub(roots[i],roots[j]);
+        d = C.mul(d, C.mul(diff,diff));
+      }
+    }
+    return d;
+  }
+
+  /* ============================================================
+     ANALYSE DES PERMUTATIONS SAISIES
+     ============================================================ */
+  function parsePermutationText(text, n){
+    const cleaned = text.trim();
+    if (cleaned === '' || /^\(?\s*\)?$/.test(cleaned)) return { cycles: [], seq: [] };
+    const cycleRe = /\(([^)]*)\)/g;
+    let m, cycles = [];
+    let matched = false;
+    while ((m = cycleRe.exec(cleaned)) !== null){
+      matched = true;
+      const inner = m[1].trim();
+      if (inner === '') continue;
+      const parts = inner.split(/[\s,]+/).filter(s=>s.length>0);
+      const nums = parts.map(s=>{
+        const v = parseInt(s,10);
+        if (!Number.isInteger(v)) throw new Error(`"${s}" n'est pas un entier`);
+        return v;
+      });
+      for (const v of nums){
+        if (v<1 || v>n) throw new Error(`l'indice ${v} est hors de {1,...,${n}}`);
+      }
+      const seen = new Set(nums);
+      if (seen.size !== nums.length) throw new Error('un cycle ne peut pas répéter un indice');
+      if (nums.length>=2) cycles.push(nums);
+    }
+    if (!matched) throw new Error('format attendu : (1 2 3) ou (1 2 3)(4 5)');
+    const seenGlobal = new Set();
+    for (const cyc of cycles){
+      for (const v of cyc){
+        if (seenGlobal.has(v)) throw new Error(`l'indice ${v} apparaît dans deux cycles`);
+        seenGlobal.add(v);
+      }
+    }
+    const seq = [];
+    for (const cyc of cycles){
+      for (let k=cyc.length-1;k>0;k--){
+        seq.push([cyc[k-1], cyc[k]]);
+      }
+    }
+    return { cycles, seq };
+  }
+
+  function permutationLabel(cycles){
+    if (cycles.length===0) return 'identité';
+    return cycles.map(c=>'('+c.join(' ')+')').join('');
+  }
+
+  /* ============================================================
+     CONSTRUCTION D'UN ARC ÉCHANGEANT DEUX RACINES
+     ============================================================ */
+  function makeSwapPath(Zi, Zj, tArc, direction){
+    const mid = C.scale(C.add(Zi,Zj), 0.5);
+    const d = C.sub(Zj, Zi);
+    const dist = C.abs(d);
+    if (dist < 1e-9){
+      return (t)=>({ Zi: {...Zi}, Zj: {...Zj} });
+    }
+    const perp = { re: -d.im/dist, im: d.re/dist };
+    const center = C.add(mid, C.scale(perp, tArc));
+    const rhoI = C.abs(C.sub(Zi, center));
+    const rhoJ = C.abs(C.sub(Zj, center));
+    const thetaI = Math.atan2(Zi.im-center.im, Zi.re-center.re);
+    const thetaJ = Math.atan2(Zj.im-center.im, Zj.re-center.re);
+    let gapIJ = thetaJ - thetaI;
+    if (direction>0){ while (gapIJ<=1e-9) gapIJ+=2*Math.PI; while(gapIJ>2*Math.PI+1e-9) gapIJ-=2*Math.PI; }
+    else { while (gapIJ>=-1e-9) gapIJ-=2*Math.PI; while(gapIJ<-2*Math.PI-1e-9) gapIJ+=2*Math.PI; }
+    const gapJI = direction*2*Math.PI - gapIJ;
+    return (t)=>{
+      const angI = thetaI + t*gapIJ;
+      const angJ = thetaJ + t*gapJI;
+      return {
+        Zi: { re: center.re+rhoI*Math.cos(angI), im: center.im+rhoI*Math.sin(angI) },
+        Zj: { re: center.re+rhoJ*Math.cos(angJ), im: center.im+rhoJ*Math.sin(angJ) },
+      };
+    };
+  }
+
+  function pathMinSeparation(path, otherFixedRoots, n=60){
+    let minSep = Infinity;
+    for (let s=0;s<=n;s++){
+      const t=s/n;
+      const {Zi,Zj} = path(t);
+      const dIJ = C.abs(C.sub(Zi,Zj));
+      if (dIJ<minSep) minSep=dIJ;
+      for (const R of otherFixedRoots){
+        const dI = C.abs(C.sub(Zi,R)), dJ = C.abs(C.sub(Zj,R));
+        if (dI<minSep) minSep=dI;
+        if (dJ<minSep) minSep=dJ;
+      }
+    }
+    return minSep;
+  }
+
+  function autoSwapPath(Zi, Zj, otherFixedRoots){
+    let best=null, bestSep=-1;
+    const dist = C.abs(C.sub(Zi,Zj));
+    const candidates = [];
+    for (const direction of [1,-1]){
+      for (const frac of [0, 0.3, 0.6, 1.0, 1.6, -0.3, -0.6, -1.0, -1.6, 2.4, -2.4]){
+        candidates.push({tArc: frac*dist, direction});
+      }
+    }
+    for (const cand of candidates){
+      const path = makeSwapPath(Zi,Zj,cand.tArc,cand.direction);
+      const sep = pathMinSeparation(path, otherFixedRoots);
+      if (sep>bestSep){ bestSep=sep; best=path; }
+    }
+    return { path: best, minSep: bestSep };
+  }
+
+  /* ============================================================
+     CONSTRUCTION D'UN CHEMIN PERMUTANT COMPLET (séquence de swaps)
+     ============================================================ */
+  function buildPermutingPath(baseRoots, seq){
+    if (seq.length===0){
+      return { path: (t)=>baseRoots.map(r=>({...r})), warn: null, segPaths: [] };
+    }
+    const nSeg = seq.length;
+    let stagePositions = [baseRoots.map(r=>({...r}))];
+    const segPaths = [];
+    let warn = null;
+    for (let s=0;s<nSeg;s++){
+      const [i1,j1] = seq[s];
+      const i = i1-1, j = j1-1;
+      const cur = stagePositions[s];
+      const others = cur.filter((_,idx)=>idx!==i && idx!==j);
+      const {path: swapPath, minSep} = autoSwapPath(cur[i], cur[j], others);
+      if (minSep < 0.35) warn = `collision difficile à éviter au segment ${s+1} (indices ${i1},${j1}) — écartez les racines.`;
+      segPaths.push({ i, j, swapPath });
+      const next = cur.map(r=>({...r}));
+      const endVals = swapPath(1);
+      next[i] = endVals.Zi; next[j] = endVals.Zj;
+      stagePositions.push(next);
+    }
+    const path = (t)=>{
+      let seg = Math.min(nSeg-1, Math.floor(t*nSeg));
+      const localT = t*nSeg - seg;
+      const base = stagePositions[seg].map(r=>({...r}));
+      const {i,j,swapPath} = segPaths[seg];
+      const vals = swapPath(localT);
+      base[i]=vals.Zi; base[j]=vals.Zj;
+      return base;
+    };
+    return { path, warn, segPaths, finalRoots: stagePositions[nSeg] };
+  }
+
+  /* ============================================================
+     COMMUTATEUR : construction par réétiquetage (conjugaison)
+     Gamma1, Gamma2 sont deux chemins permutants BASÉS À Z (pas des
+     lacets en général). Le commutateur topologique correct requiert
+     de réétiqueter chaque pièce successive par la permutation déjà
+     accumulée — une simple concaténation des séquences brutes donne
+     la bonne permutation finale, mais PAS le bon indice topologique
+     (vérifié : l'indice du discriminant n'est nul qu'avec ce
+     réétiquetage par conjugaison, jamais avec la version naïve).
+     ============================================================ */
+  function findPositionPerm(baseRoots, endPositions, n){
+    const pi = new Array(n);
+    for (let k=0;k<n;k++){
+      let best=-1, bestD=Infinity;
+      for (let j=0;j<n;j++){ const d=C.abs(C.sub(baseRoots[j],endPositions[k])); if(d<bestD){bestD=d;best=j;} }
+      pi[k]=best;
+    }
+    return pi;
+  }
+  function invertPerm(pi,n){ const inv=new Array(n); for(let k=0;k<n;k++) inv[pi[k]]=k; return inv; }
+  function composePerm(f,g,n){ const r=new Array(n); for(let k=0;k<n;k++) r[k]=f[g[k]]; return r; }
+
+  // Enveloppe le resultat de buildPermutingPath (une seule sequence de transpositions,
+  // eventuellement de longueur 1 pour une transposition de base) en objet uniforme.
+  function wrapPermutingPath(baseRootsForPi, build, n){
+    if (build.warn) return { warn: build.warn };
+    const pi = findPositionPerm(baseRootsForPi, build.path(1), n);
+    const leafSegsOrdered = build.segPaths.map(seg=>({ i: seg.i, j: seg.j, swapPath: seg.swapPath }));
+    return { path: build.path, pi, leafSegsOrdered, warn: null };
+  }
+
+  // Commutateur de DEUX objets de chemin permutant quelconques — reutilisable recursivement.
+  // C'est la construction par conjugaison verifiee (indice du discriminant nul).
+  function buildCommutatorObject(n, objA, objB){
+    const pi1 = objA.pi, pi2 = objB.pi;
+    const pi1inv = invertPerm(pi1,n), pi2inv = invertPerm(pi2,n);
+    const Bp = (t)=>{ const raw=objB.path(t); return pi1.map(idx=>raw[idx]); };
+    const rho = composePerm(pi1inv, composePerm(pi2,pi1,n), n);
+    const Cp = (t)=>{ const raw=objA.path(1-t); return rho.map(idx=>raw[idx]); };
+    const tau = rho.map(idx=>pi2inv[idx]);
+    const Dp = (t)=>{ const raw=objB.path(1-t); return tau.map(idx=>raw[idx]); };
+
+    const wA = objA.leafSegsOrdered.length, wB = objB.leafSegsOrdered.length;
+    const totalLen = 2*wA+2*wB;
+    const fA = wA/totalLen, fB = wB/totalLen;
+    const path = (t)=>{
+      if (t <= fA) return objA.path(fA>0 ? t/fA : 0);
+      if (t <= fA+fB) return Bp(fB>0 ? (t-fA)/fB : 0);
+      if (t <= 2*fA+fB) return Cp(fA>0 ? (t-fA-fB)/fA : 0);
+      return Dp(fB>0 ? (t-2*fA-fB)/fB : 0);
+    };
+    const resultPi = composePerm(pi2inv, composePerm(pi1inv, composePerm(pi2,pi1,n), n), n);
+    const leafSegsOrdered = objA.leafSegsOrdered.concat(objB.leafSegsOrdered, [...objA.leafSegsOrdered].reverse(), [...objB.leafSegsOrdered].reverse());
+    return { path, pi: resultPi, leafSegsOrdered, warn: null };
+  }
+
+  function buildCommutatorPath(baseRoots, seq1, seq2){
+    const n = baseRoots.length;
+    const objA = wrapPermutingPath(baseRoots, buildPermutingPath(baseRoots, seq1), n);
+    if (objA.warn) return { warn: objA.warn };
+    const objB = wrapPermutingPath(baseRoots, buildPermutingPath(baseRoots, seq2), n);
+    if (objB.warn) return { warn: objB.warn };
+    const comm = buildCommutatorObject(n, objA, objB);
+    return { path: comm.path, warn: null, leafSegsOrdered: comm.leafSegsOrdered };
+  }
+
+  // Construction recursive ciblant un 3-cycle (i,j,k) a un etage donne, suivant l'algorithme
+  // de cor-DnS>An : etage 1 = [Gamma_ij, Gamma_jk] ; etage p+1 = [construit(l,i,j,p), construit(j,m,k,p)]
+  // avec l,m les deux plus petits indices frais hors {i,j,k} (choix deterministe).
+  function buildTargetObject(n, baseRoots, target, stage){
+    const [i,j,k] = target;
+    if (stage <= 1){
+      const bIJ = wrapPermutingPath(baseRoots, buildPermutingPath(baseRoots, [[i,j]]), n);
+      if (bIJ.warn) return { warn: bIJ.warn };
+      const bJK = wrapPermutingPath(baseRoots, buildPermutingPath(baseRoots, [[j,k]]), n);
+      if (bJK.warn) return { warn: bJK.warn };
+      return buildCommutatorObject(n, bIJ, bJK);
+    }
+    const used = new Set([i,j,k]);
+    const fresh = [];
+    for (let idx=1; idx<=n && fresh.length<2; idx++){ if (!used.has(idx)) fresh.push(idx); }
+    if (fresh.length<2) return { warn: `il faut au moins 5 racines pour atteindre l'étage ${stage} (indices frais manquants).` };
+    const [l,m] = fresh;
+    const objA = buildTargetObject(n, baseRoots, [l,i,j], stage-1);
+    if (objA.warn) return objA;
+    const objB = buildTargetObject(n, baseRoots, [j,m,k], stage-1);
+    if (objB.warn) return objB;
+    return buildCommutatorObject(n, objA, objB);
+  }
+
+  // Determine, pour un t global donne, quel segment de base (i,j) de la liste aplatie est actif.
+  function activeLeafInfo(t, leafSegsOrdered){
+    const count = leafSegsOrdered.length;
+    const idx = Math.min(count-1, Math.max(0, Math.floor(t*count)));
+    return { idx, count, seg: leafSegsOrdered[idx] };
+  }
+
+  // Echantillonne un segment d'arc (Zi(t), Zj(t)) en une polyligne, pour le dessin.
+  function sampleArcPolyline(swapPath, nSamp=32){
+    const ptsI=[], ptsJ=[];
+    for (let s=0;s<=nSamp;s++){
+      const {Zi,Zj} = swapPath(s/nSamp);
+      ptsI.push(Zi); ptsJ.push(Zj);
+    }
+    return { ptsI, ptsJ };
+  }
+
+  /* ============================================================
+     UNWRAP / INDICE
+     ============================================================ */
+  function computeIndex(fn, n){
+    const z0 = fn(0);
+    let theta = Math.atan2(z0.im, z0.re);
+    let prev = z0;
+    for (let i=1;i<=n;i++){
+      const t=i/n;
+      const z = fn(t);
+      let d = Math.atan2(z.im,z.re) - Math.atan2(prev.im,prev.re);
+      while (d>Math.PI) d-=2*Math.PI;
+      while (d<=-Math.PI) d+=2*Math.PI;
+      theta += d;
+      prev = z;
+    }
+    return (theta - Math.atan2(z0.im,z0.re)) / (2*Math.PI);
+  }
+
+  /* ============================================================
+     EXPRESSION PAR RADICAUX : analyseur syntaxique (avec let-bindings
+     pour partager une détermination entre plusieurs usages, condition
+     nécessaire pour exprimer correctement Cardan : w réutilisé deux
+     fois doit être LE MÊME nœud, pas deux radicaux indépendants).
+     ============================================================ */
+  function tokenizeExpr(src){
+    const toks=[]; let i=0;
+    while(i<src.length){
+      const c=src[i];
+      if(/\s/.test(c)){i++;continue;}
+      if(/[0-9.]/.test(c)){let j=i; while(j<src.length && /[0-9.]/.test(src[j])) j++; toks.push({type:'num',value:parseFloat(src.slice(i,j))}); i=j; continue;}
+      if(/[a-zA-Z_]/.test(c)){let j=i; while(j<src.length && /[a-zA-Z_0-9]/.test(src[j])) j++; const word=src.slice(i,j);
+        toks.push({type:'ident', value:word}); i=j; continue;}
+      if('+-*/^(),'.includes(c)){toks.push({type:c}); i++; continue;}
+      if(c==='='){toks.push({type:'='}); i++; continue;}
+      throw new Error(`caractère inattendu : "${c}"`);
+    }
+    return toks;
+  }
+
+  function parseExprAST(src){
+    const toks = tokenizeExpr(src);
+    let pos = 0;
+    const bindings = {}; // ident -> noeud AST partage
+    const radicalNodes = []; // liste des noeuds radicaux rencontres, dans l'ordre de premiere apparition
+    const peek = ()=>toks[pos];
+    const atEnd = ()=>pos>=toks.length;
+
+    function expectIdent(){ const t=peek(); if(!t||t.type!=='ident') throw new Error('identifiant attendu'); pos++; return t.value; }
+    function expectType(ty){ const t=peek(); if(!t||t.type!==ty) throw new Error(`"${ty}" attendu`); pos++; return t; }
+
+    function canStartAtom(t){ return t && (t.type==='num' || (t.type==='ident' && t.value!=='in' && t.value!=='let') || t.type==='('); }
+
+    function parseAtom(){
+      const t=peek(); if(!t) throw new Error('expression incomplète');
+      if (t.type==='num'){ pos++; return {type:'lit', re:t.value, im:0}; }
+      if (t.type==='ident'){
+        pos++;
+        if (t.value==='let'){
+          const name = expectIdent();
+          expectType('=');
+          const bound = parseExpr();
+          const inTok = expectIdent();
+          if (inTok!=='in') throw new Error('"in" attendu après la définition let');
+          bindings[name] = bound;
+          const body = parseExpr();
+          delete bindings[name];
+          return body;
+        }
+        if (bindings.hasOwnProperty(t.value)) return bindings[t.value]; // reference partagee, meme noeud
+        const m = /^a(\d+)$/.exec(t.value);
+        if (m) return {type:'coef', idx: parseInt(m[1],10)};
+        throw new Error(`identifiant inconnu "${t.value}" (attendu : a0, a1, ... ou une variable liée par let)`);
+      }
+      if (t.type==='('){
+        pos++;
+        const node = parseExpr();
+        if (!peek() || peek().type!==')') throw new Error('parenthèse fermante manquante');
+        pos++;
+        return node;
+      }
+      throw new Error(`terme inattendu près de "${t.type}"`);
+    }
+
+    function parsePower(){
+      const base = parseAtom();
+      if (peek() && peek().type==='^'){
+        pos++;
+        // radical : ^(1/k)  — detection stricte du motif
+        if (peek() && peek().type==='('){
+          const save = pos;
+          pos++;
+          const one = peek();
+          if (one && one.type==='num' && one.value===1 && toks[pos+1] && toks[pos+1].type==='/'){
+            pos+=2;
+            const kTok = peek();
+            if (!kTok || kTok.type!=='num' || !Number.isInteger(kTok.value) || kTok.value<2) throw new Error("l'ordre du radical doit être un entier ≥2, syntaxe (1/k)");
+            pos++;
+            if (!peek() || peek().type!==')') throw new Error('parenthèse fermante manquante après (1/k)');
+            pos++;
+            const node = {type:'radical', base, k: kTok.value};
+            radicalNodes.push(node);
+            return node;
+          }
+          pos = save; // pas un radical, on retombe sur une puissance entiere parenthesee (rare, mais robuste)
+        }
+        // puissance entiere ordinaire : ^k ou ^-k
+        let sign=1;
+        if (peek() && peek().type==='-'){ sign=-1; pos++; }
+        const kTok = peek();
+        if (!kTok || kTok.type!=='num' || !Number.isInteger(kTok.value)) throw new Error("l'exposant doit être un entier, ou (1/k) pour un radical");
+        pos++;
+        return {type:'pow', base, k: sign*kTok.value};
+      }
+      return base;
+    }
+
+    function parseUnary(){
+      let sign=1;
+      while (peek() && (peek().type==='+'||peek().type==='-')){ if(peek().type==='-') sign*=-1; pos++; }
+      const node = parsePower();
+      return sign===-1 ? {type:'neg', node} : node;
+    }
+
+    function parseTerm(){
+      let node = parseUnary();
+      while (true){
+        if (peek() && (peek().type==='*'||peek().type==='/')){ const op=peek().type; pos++; const rhs=parseUnary(); node={type:'bin',op,left:node,right:rhs}; }
+        else if (canStartAtom(peek())){ const rhs=parseUnary(); node={type:'bin',op:'*',left:node,right:rhs}; }
+        else break;
+      }
+      return node;
+    }
+
+    function parseExpr(){
+      let node = parseTerm();
+      while (peek() && (peek().type==='+'||peek().type==='-')){ const op=peek().type; pos++; const rhs=parseTerm(); node={type:'bin',op,left:node,right:rhs}; }
+      return node;
+    }
+
+    const ast = parseExpr();
+    if (!atEnd()) throw new Error("caractères en trop après l'expression");
+    return { ast, radicalNodes };
+  }
+
+  /* ============================================================
+     TRANSPORT CONTINU DE L'EXPRESSION LE LONG DE γ(t)
+     — récursion exacte de res-transportconstruction : chaque
+     radical est relevé continûment (unwrap) à partir de sa
+     détermination initiale choisie ; les noeuds partagés (via let)
+     ne sont évalués qu'UNE fois par échantillon (état par référence
+     de noeud, pas par position dans l'arbre).
+     ============================================================ */
+  function evalStepAST(node, aVec, stateMap, branchChoice, radicalIndexMap, isFirstSample){
+    switch(node.type){
+      case 'lit': return {re:node.re, im:node.im};
+      case 'coef': {
+        const v = aVec[node.idx];
+        if (v===undefined) throw new Error(`a${node.idx} n'existe pas pour ce degré`);
+        return v;
+      }
+      case 'neg': return C.neg(evalStepAST(node.node, aVec, stateMap, branchChoice, radicalIndexMap, isFirstSample));
+      case 'pow': {
+        const b = evalStepAST(node.base, aVec, stateMap, branchChoice, radicalIndexMap, isFirstSample);
+        let k = node.k;
+        if (k===0) return {re:1,im:0};
+        let base = k<0 ? C.div({re:1,im:0}, b) : b;
+        let n=Math.abs(k), result={re:1,im:0};
+        for (let i=0;i<n;i++) result=C.mul(result,base);
+        return result;
+      }
+      case 'bin': {
+        const l=evalStepAST(node.left, aVec, stateMap, branchChoice, radicalIndexMap, isFirstSample);
+        const r=evalStepAST(node.right, aVec, stateMap, branchChoice, radicalIndexMap, isFirstSample);
+        if (node.op==='+') return C.add(l,r);
+        if (node.op==='-') return C.sub(l,r);
+        if (node.op==='*') return C.mul(l,r);
+        if (node.op==='/') return C.div(l,r);
+      }
+      case 'radical': {
+        const delta = evalStepAST(node.base, aVec, stateMap, branchChoice, radicalIndexMap, isFirstSample);
+        const rho = Math.hypot(delta.re, delta.im);
+        const rawTheta = Math.atan2(delta.im, delta.re);
+        let st = stateMap.get(node);
+        if (isFirstSample || !st){
+          const j0 = branchChoice[radicalIndexMap.get(node)] || 0;
+          const theta0 = rawTheta + 2*Math.PI*j0;
+          st = { prevRawTheta: rawTheta, theta: theta0 };
+          stateMap.set(node, st);
+        } else {
+          let d = rawTheta - st.prevRawTheta;
+          while (d>Math.PI) d-=2*Math.PI;
+          while (d<=-Math.PI) d+=2*Math.PI;
+          st.theta += d;
+          st.prevRawTheta = rawTheta;
+        }
+        const r = Math.pow(rho, 1/node.k);
+        const ang = st.theta/node.k;
+        return { re: r*Math.cos(ang), im: r*Math.sin(ang) };
+      }
+    }
+    throw new Error('nœud AST inconnu');
+  }
+
+  // Calcule la trace complete R_gamma(t) pour UN choix de determinations initiales,
+  // en echantillonnant sequentiellement (necessaire pour le relevement continu).
+  function traceExpression(ast, radicalNodes, commPathFn, nSamp, branchChoice){
+    const radicalIndexMap = new Map();
+    radicalNodes.forEach((node,i)=>radicalIndexMap.set(node,i));
+    const stateMap = new Map();
+    const trace = new Array(nSamp+1);
+    for (let s=0;s<=nSamp;s++){
+      const t = s/nSamp;
+      const roots_t = commPathFn(t);
+      const aVec = vieteCoeffs(roots_t);
+      trace[s] = evalStepAST(ast, aVec, stateMap, branchChoice, radicalIndexMap, s===0);
+    }
+    return trace;
+  }
+
+  // Enumere les combinaisons de determinations initiales (produit cartesien des ordres
+  // de chaque radical), plafonne pour rester lisible a l'ecran.
+  function enumerateBranchChoices(radicalNodes, cap){
+    const orders = radicalNodes.map(n=>n.k);
+    const total = orders.reduce((a,b)=>a*b,1);
+    const combos = [];
+    const count = Math.min(total, cap);
+    for (let idx=0; idx<count; idx++){
+      let rem=idx; const choice=[];
+      for (let i=0;i<orders.length;i++){ choice.push(rem % orders[i]); rem = Math.floor(rem/orders[i]); }
+      combos.push(choice);
+    }
+    return { combos, total };
+  }
+
+  /* ============================================================
+     ÉTAT GLOBAL
+     ============================================================ */
+  const state = {
+    n: 5,
+    roots: [],
+    mode: 'free', // 'free' ou 'target'
+    stage: 1,
+    built: false,
+    animScale: 1,
+    commPath: null,
+    leafSegsOrdered: [],
+    discIndexVal: null,
+    exprAst: null, exprRadicalNodes: [], exprCombos: [], exprTotalCombos: 0, exprTraces: [],
+    t: 0,
+    playing: false,
+  };
+
+  function defaultRoots(n){
+    const arr = [];
+    for (let i=0;i<n;i++){
+      const ang = (i/n)*2*Math.PI - Math.PI/2;
+      const r = 3.2 + 0.5*Math.sin(i*1.7+0.3);
+      arr.push({ re: r*Math.cos(ang), im: r*Math.sin(ang) });
+    }
+    return arr;
+  }
+
+  /* ============================================================
+     CANVAS
+     ============================================================ */
+  const rootsCanvas = document.getElementById('rootsCanvas');
+  const coefCanvas = document.getElementById('coefCanvas');
+  const exprCanvas = document.getElementById('exprCanvas');
+  let rSize=520, cSize=520, eSize=520;
+  const R_RANGE = 5.5;
+  let coefRange = 8;
+  let exprRange = 8;
+
+  function setupDPR(canvas,size){
+    const dpr=window.devicePixelRatio||1;
+    canvas.width=size*dpr; canvas.height=size*dpr;
+    canvas.style.width=size+'px'; canvas.style.height=size+'px';
+    const ctx=canvas.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0);
+    return ctx;
+  }
+  let rCtx = setupDPR(rootsCanvas,rSize);
+  let cCtx = setupDPR(coefCanvas,cSize);
+  let eCtx = setupDPR(exprCanvas,eSize);
+
+  function makeToPx(size,range){ return (re,im)=>({x:size/2+re*(size/(2*range)), y:size/2-im*(size/(2*range))}); }
+  function makeFromPx(size,range){ return (x,y)=>({re:(x-size/2)/(size/(2*range)), im:(size/2-y)/(size/(2*range))}); }
+
+  function drawGrid(ctx,size,range,toPx){
+    ctx.clearRect(0,0,size,size);
+    ctx.strokeStyle='rgba(159,176,166,0.16)'; ctx.lineWidth=1;
+    let step=range/8; const mag=Math.pow(10,Math.floor(Math.log10(step||1))); step=Math.ceil(step/mag)*mag||1;
+    for (let g=-Math.ceil(range/step)*step; g<=range; g+=step){
+      const p1=toPx(g,-range), p2=toPx(g,range);
+      ctx.beginPath(); ctx.moveTo(p1.x+0.5,p1.y); ctx.lineTo(p2.x+0.5,p2.y); ctx.stroke();
+      const p3=toPx(-range,g), p4=toPx(range,g);
+      ctx.beginPath(); ctx.moveTo(p3.x,p3.y+0.5); ctx.lineTo(p4.x,p4.y+0.5); ctx.stroke();
+    }
+    ctx.strokeStyle='rgba(237,234,224,0.32)'; ctx.lineWidth=1.2;
+    const o1=toPx(-range,0), o2=toPx(range,0);
+    ctx.beginPath(); ctx.moveTo(o1.x,o1.y); ctx.lineTo(o2.x,o2.y); ctx.stroke();
+    const o3=toPx(0,-range), o4=toPx(0,range);
+    ctx.beginPath(); ctx.moveTo(o3.x,o3.y); ctx.lineTo(o4.x,o4.y); ctx.stroke();
+  }
+
+  /* ============================================================
+     RECALCUL / VALIDATION
+     ============================================================ */
+  function setStatus(msg,kind){ const el=document.getElementById('status'); el.textContent=msg; el.className='status '+(kind||'info'); }
+
+  function tryBuild(){
+    state.built = false;
+    document.getElementById('playBtn').disabled = true;
+    document.getElementById('scrub').disabled = true;
+    document.getElementById('discIndex').textContent = '—';
+    document.getElementById('permInfo1').textContent = '—';
+    document.getElementById('permInfo2').textContent = '—';
+
+    let comm;
+    if (state.mode === 'free'){
+      state.animScale = 1;
+      let p1, p2;
+      try{ p1 = parsePermutationText(document.getElementById('perm1Input').value, state.n); }
+      catch(e){ setStatus('Γ₁ : '+e.message, 'error'); redraw(); return; }
+      try{ p2 = parsePermutationText(document.getElementById('perm2Input').value, state.n); }
+      catch(e){ setStatus('Γ₂ : '+e.message, 'error'); redraw(); return; }
+      document.getElementById('permInfo1').textContent = permutationLabel(p1.cycles);
+      document.getElementById('permInfo2').textContent = permutationLabel(p2.cycles);
+      comm = buildCommutatorPath(state.roots, p1.seq, p2.seq);
+    } else {
+      const raw = document.getElementById('targetInput').value.trim();
+      const nums = raw.split(/[\s,]+/).filter(s=>s.length>0).map(s=>parseInt(s,10));
+      if (nums.length!==3 || nums.some(v=>!Number.isInteger(v)||v<1||v>state.n) || new Set(nums).size!==3){
+        setStatus(`cible invalide : entrez 3 indices distincts entre 1 et ${state.n} (ex : 1 2 3).`, 'error'); redraw(); return;
+      }
+      state.animScale = Math.pow(4, state.stage-1);
+      document.getElementById('permInfo1').textContent = `cible : (${nums.join(' ')})`;
+      document.getElementById('permInfo2').textContent = `étage : ${state.stage}`;
+      comm = buildTargetObject(state.n, state.roots, nums, state.stage);
+    }
+
+    if (comm.warn){ setStatus(comm.warn, 'error'); redraw(); return; }
+    state.commPath = comm.path;
+    state.leafSegsOrdered = comm.leafSegsOrdered;
+
+    const discFn = (t)=> discriminant(state.commPath(t));
+    state.discIndexVal = computeIndex(discFn, Math.min(20000, Math.max(2000, state.leafSegsOrdered.length*300)));
+
+    state.built = true;
+    document.getElementById('playBtn').disabled = false;
+    document.getElementById('scrub').disabled = false;
+    document.getElementById('discIndex').textContent = state.discIndexVal.toFixed(3);
+    setStatus(`Commutateur construit (${state.leafSegsOrdered.length} transpositions élémentaires). Cliquez « Lecture ».`, 'ok');
+
+    state.t = 0;
+    document.getElementById('scrub').value = 0;
+    document.getElementById('tReadout').textContent = 't = 0.000';
+    // toute reconstruction du commutateur invalide les traces d'expression precedentes
+    state.exprTraces = [];
+    redraw();
+  }
+
+  function setExprStatus(msg, kind){ const el=document.getElementById('exprStatus'); el.textContent=msg; el.className='status '+(kind||'info'); }
+
+  function tryBuildExpr(){
+    state.exprTraces = [];
+    if (!state.built){
+      setExprStatus("Construisez d'abord le commutateur (ci-dessus) avant de suivre une expression.", 'error');
+      redraw(); return;
+    }
+    const src = document.getElementById('exprInput').value;
+    let parsed;
+    try{ parsed = parseExprAST(src); }
+    catch(e){ setExprStatus('Erreur de syntaxe : '+e.message, 'error'); redraw(); return; }
+    state.exprAst = parsed.ast;
+    state.exprRadicalNodes = parsed.radicalNodes;
+
+    const { combos, total } = enumerateBranchChoices(parsed.radicalNodes, 8);
+    state.exprCombos = combos;
+    state.exprTotalCombos = total;
+
+    const nSamp = Math.min(20000, Math.max(2000, state.leafSegsOrdered.length*300));
+    try{
+      state.exprTraces = combos.map(choice => traceExpression(parsed.ast, parsed.radicalNodes, state.commPath, nSamp, choice));
+    } catch(e){ setExprStatus("Erreur d'évaluation : "+e.message, 'error'); redraw(); return; }
+
+    const capNote = total>combos.length ? ` (sur ${total} au total — affichage plafonné à 8)` : '';
+    setExprStatus(`${combos.length} détermination(s) initiale(s) suivie(s)${capNote}. Utilisez la lecture ci-dessus.`, 'ok');
+    redraw();
+  }
+  document.getElementById('exprBuildBtn').addEventListener('click', tryBuildExpr);
+  document.getElementById('exprInput').addEventListener('input', ()=>{ state.exprTraces=[]; });
+
+  function setExprTemplate(name){
+    document.querySelectorAll('.expr-tpl').forEach(b=>b.classList.remove('active'));
+    if (name==='quad'){
+      document.getElementById('tplQuad').classList.add('active');
+      document.getElementById('exprInput').value = '-a1/2 + (a1^2/4 - a0)^(1/2)';
+      if (state.n!==2) setN(2);
+    } else if (name==='cardan'){
+      document.getElementById('tplCardan').classList.add('active');
+      document.getElementById('exprInput').value = 'let u = -a0/2 + (a0^2/4 + a1^3/27)^(1/2) in let w = u^(1/3) in w - a1/(3*w)';
+      if (state.n!==3) setN(3);
+      // recentre les racines pour que leur somme soit nulle (a2=0, cas deprime requis par cette formule)
+      let cx=0, cy=0; for (const r of state.roots){ cx+=r.re; cy+=r.im; } cx/=state.n; cy/=state.n;
+      state.roots = state.roots.map(r=>({re:r.re-cx, im:r.im-cy}));
+      recomputeCoefRange();
+      invalidateBuild("Racines recentrées (a2=0, cas déprimé requis par Cardan) — reconstruisez le commutateur.");
+    } else {
+      document.getElementById('tplFree').classList.add('active');
+    }
+    state.exprTraces = [];
+    redraw();
+  }
+  document.getElementById('tplQuad').addEventListener('click', ()=>setExprTemplate('quad'));
+  document.getElementById('tplCardan').addEventListener('click', ()=>setExprTemplate('cardan'));
+  document.getElementById('tplFree').addEventListener('click', ()=>setExprTemplate('free'));
+
+  /* ============================================================
+     RENDU
+     ============================================================ */
+  function strokePolylineComplex(ctx, toPx, pts, color, alpha, width){
+    ctx.strokeStyle = color; ctx.globalAlpha = alpha===undefined?1:alpha; ctx.lineWidth = width||1.4;
+    ctx.beginPath();
+    for (let i=0;i<pts.length;i++){ const p = toPx(pts[i].re, pts[i].im); if (i===0) ctx.moveTo(p.x,p.y); else ctx.lineTo(p.x,p.y); }
+    ctx.stroke(); ctx.globalAlpha=1;
+  }
+
+  function redraw(){
+    const toPxR = makeToPx(rSize, R_RANGE);
+    drawGrid(rCtx, rSize, R_RANGE, toPxR);
+
+    // fantomes : positions de depart, toujours visibles — trait epais, numero au-dessus
+    // (pas dedans, pour bien le distinguer du point plein qui porte son numero a l'interieur) :
+    // en fin de lecture, comparer fantome/point plein donne directement la permutation realisee.
+    for (let i=0;i<state.n;i++){
+      const p = toPxR(state.roots[i].re, state.roots[i].im);
+      rCtx.strokeStyle = colorForIndex(i,state.n,0.8); rCtx.lineWidth = 2.2;
+      rCtx.beginPath(); rCtx.arc(p.x,p.y,7.5,0,Math.PI*2); rCtx.stroke();
+      rCtx.fillStyle = colorForIndex(i,state.n,0.95);
+      rCtx.font = '600 11px IBM Plex Mono, monospace';
+      rCtx.textAlign = 'center'; rCtx.textBaseline = 'bottom';
+      rCtx.fillText(String(i+1), p.x, p.y-11.5);
+    }
+
+    let activeInfo = null;
+    if (state.built && state.leafSegsOrdered && state.leafSegsOrdered.length){
+      // deduplication : la meme transposition de base peut apparaitre plusieurs fois
+      // (recursion profonde qui la reutilise), on ne la trace qu'une fois.
+      const seen = new Map();
+      for (const seg of state.leafSegsOrdered){
+        if (!seen.has(seg.swapPath)){
+          seen.set(seg.swapPath, { i: seg.i, j: seg.j, ...sampleArcPolyline(seg.swapPath) });
+        }
+      }
+      for (const poly of seen.values()){
+        strokePolylineComplex(rCtx, toPxR, poly.ptsI, colorForIndex(poly.i,state.n,1), 0.2, 1.1);
+        strokePolylineComplex(rCtx, toPxR, poly.ptsJ, colorForIndex(poly.j,state.n,1), 0.2, 1.1);
+      }
+      const leaf = activeLeafInfo(state.t, state.leafSegsOrdered);
+      activeInfo = leaf;
+      const activePoly = seen.get(leaf.seg.swapPath);
+      if (activePoly){
+        strokePolylineComplex(rCtx, toPxR, activePoly.ptsI, colorForIndex(activePoly.i,state.n,1), 1, 2.6);
+        strokePolylineComplex(rCtx, toPxR, activePoly.ptsJ, colorForIndex(activePoly.j,state.n,1), 1, 2.6);
+      }
+    }
+
+    const curRoots = state.built ? state.commPath(state.t) : state.roots;
+
+    const legend = document.getElementById('rootsLegend');
+    legend.innerHTML = '';
+    for (let i=0;i<state.n;i++){
+      const p = toPxR(curRoots[i].re, curRoots[i].im);
+      rCtx.fillStyle = colorForIndex(i,state.n,1);
+      rCtx.beginPath(); rCtx.arc(p.x,p.y,7,0,Math.PI*2); rCtx.fill();
+      rCtx.strokeStyle = '#0c1510'; rCtx.lineWidth=1.2; rCtx.stroke();
+      rCtx.fillStyle = '#0c1510';
+      rCtx.font = '11px IBM Plex Mono, monospace';
+      rCtx.textAlign='center'; rCtx.textBaseline='middle';
+      rCtx.fillText(String(i+1), p.x, p.y);
+
+      const item = document.createElement('div'); item.className='item';
+      const dot = document.createElement('span'); dot.className='dot'; dot.style.background=colorForIndex(i,state.n,1);
+      const lbl = document.createElement('span'); lbl.textContent = `Z${i+1} = ${curRoots[i].re.toFixed(2)} ${curRoots[i].im<0?'−':'+'} ${Math.abs(curRoots[i].im).toFixed(2)}i`;
+      item.appendChild(dot); item.appendChild(lbl); legend.appendChild(item);
+    }
+
+    // plan des coefficients : traînée persistante depuis t=0 jusqu'au t courant
+    const toPxC = makeToPx(cSize, coefRange);
+    drawGrid(cCtx, cSize, coefRange, toPxC);
+    const coeffsNow = vieteCoeffs(curRoots);
+    if (state.built && state.t>0){
+      const nSamp = 240 * state.animScale;
+      const trails = Array.from({length: coeffsNow.length}, ()=>[]);
+      for (let s=0;s<=nSamp;s++){
+        const tt = state.t*s/nSamp;
+        const c = vieteCoeffs(state.commPath(tt));
+        for (let k=0;k<c.length;k++) trails[k].push(c[k]);
+      }
+      for (let k=0;k<trails.length;k++){
+        strokePolylineComplex(cCtx, toPxC, trails[k], colorForIndex(k,trails.length,1), 0.6, 1.8);
+      }
+    }
+    for (let k=0;k<coeffsNow.length;k++){
+      const p = toPxC(coeffsNow[k].re, coeffsNow[k].im);
+      cCtx.fillStyle = colorForIndex(k, coeffsNow.length, 1);
+      cCtx.beginPath(); cCtx.arc(p.x,p.y,6,0,Math.PI*2); cCtx.fill();
+      cCtx.strokeStyle = '#0c1510'; cCtx.lineWidth=1; cCtx.stroke();
+      cCtx.fillStyle = '#EDEAE0'; cCtx.font='10px IBM Plex Mono, monospace';
+      cCtx.textAlign='left'; cCtx.textBaseline='bottom';
+      cCtx.fillText('a'+k, p.x+8, p.y-6);
+    }
+
+    if (activeInfo){
+      document.getElementById('phaseLabel').textContent =
+        `Transposition ${activeInfo.idx+1}/${activeInfo.count} : (${activeInfo.seg.i+1} ${activeInfo.seg.j+1}) en cours`;
+    } else {
+      document.getElementById('phaseLabel').textContent = '';
+    }
+
+    // panneau 3 : image de l'expression par radicaux, avec suivi continu
+    redrawExprPanel();
+  }
+
+  function interpTrace(trace, t){
+    const nMax = trace.length-1;
+    const x = t*nMax;
+    const i0 = Math.max(0, Math.min(nMax-1, Math.floor(x)));
+    const frac = x-i0;
+    const a=trace[i0], b=trace[i0+1]||trace[i0];
+    return { re: a.re*(1-frac)+b.re*frac, im: a.im*(1-frac)+b.im*frac };
+  }
+
+  function redrawExprPanel(){
+    const toPxE = makeToPx(eSize, exprRange);
+    drawGrid(eCtx, eSize, exprRange, toPxE);
+
+    if (!state.exprTraces.length){
+      const legend = document.getElementById('exprLegend'); legend.innerHTML='';
+      return;
+    }
+
+    // recadrage automatique : englobe toutes les traces
+    let maxMod = 1;
+    for (const trace of state.exprTraces) for (const z of trace) maxMod = Math.max(maxMod, Math.hypot(z.re,z.im));
+    exprRange = maxMod*1.25;
+
+    const legend = document.getElementById('exprLegend');
+    legend.innerHTML = '';
+
+    for (let b=0; b<state.exprTraces.length; b++){
+      const trace = state.exprTraces[b];
+      const col = colorForIndex(b, state.exprTraces.length, 1);
+
+      // fantome de la determination initiale : anneau colore seul, sans numero
+      // (plusieurs determinations peuvent coincider exactement — cf. Cardan — un numero
+      // superposerait alors plusieurs chiffres illisibles ; la couleur seule suffit a distinguer).
+      const p0 = toPxE(trace[0].re, trace[0].im);
+      eCtx.strokeStyle = colorForIndex(b, state.exprTraces.length, 0.8); eCtx.lineWidth = 2.2;
+      eCtx.beginPath(); eCtx.arc(p0.x,p0.y,7.5,0,Math.PI*2); eCtx.stroke();
+
+      // trainee persistante jusqu'au t courant
+      if (state.t>0){
+        const nMax = trace.length-1;
+        const upTo = Math.min(nMax, Math.floor(state.t*nMax));
+        const pts = trace.slice(0, upTo+1);
+        strokePolylineComplex(eCtx, toPxE, pts, col, 0.6, 1.8);
+      }
+
+      // point courant : disque colore seul, sans numero
+      const cur = interpTrace(trace, state.t);
+      const pc = toPxE(cur.re, cur.im);
+      eCtx.fillStyle = col;
+      eCtx.beginPath(); eCtx.arc(pc.x,pc.y,6,0,Math.PI*2); eCtx.fill();
+      eCtx.strokeStyle = '#0c1510'; eCtx.lineWidth=1; eCtx.stroke();
+
+      const item = document.createElement('div'); item.className='item';
+      const dot = document.createElement('span'); dot.className='dot'; dot.style.background=col;
+      const closes = Math.hypot(trace[0].re-trace[trace.length-1].re, trace[0].im-trace[trace.length-1].im) < 1e-2*Math.max(1,exprRange);
+      const lbl = document.createElement('span');
+      lbl.textContent = `détermination ${b+1} : ${closes?'se referme':'reste ouverte'} (écart ${Math.hypot(trace[0].re-trace[trace.length-1].re, trace[0].im-trace[trace.length-1].im).toExponential(2)})`;
+      item.appendChild(dot); item.appendChild(lbl); legend.appendChild(item);
+    }
+  }
+
+  /* ============================================================
+     RECADRAGE AUTOMATIQUE DE L'ÉCHELLE DES COEFFICIENTS
+     ============================================================ */
+  function recomputeCoefRange(){
+    let maxMod = 1;
+    const c = vieteCoeffs(state.roots);
+    for (const z of c) maxMod = Math.max(maxMod, Math.hypot(z.re,z.im));
+    coefRange = Math.max(4, maxMod*2.2);
+  }
+
+  /* ============================================================
+     LECTURE / SCRUB
+     ============================================================ */
+  let rafId=null;
+  function stopPlayback(){ state.playing=false; if(rafId){cancelAnimationFrame(rafId); rafId=null;} document.getElementById('playBtn').textContent='▶ Lecture'; }
+  function startPlayback(){
+    if (!state.built) return;
+    if (state.t>=1-1e-9) state.t=0;
+    state.playing=true; document.getElementById('playBtn').textContent='⏸ Pause';
+    const DURATION=9000*state.animScale;
+    const startT=state.t, startTime=performance.now();
+    const step=(now)=>{
+      if (!state.playing) return;
+      let frac=(now-startTime)/(DURATION*(1-startT));
+      if (frac>=1){ state.t=1; updateFrame(); stopPlayback(); return; }
+      state.t = startT + (1-startT)*frac;
+      updateFrame();
+      rafId=requestAnimationFrame(step);
+    };
+    rafId=requestAnimationFrame(step);
+  }
+  function updateFrame(){
+    document.getElementById('scrub').value=state.t;
+    document.getElementById('tReadout').textContent='t = '+state.t.toFixed(3);
+    redraw();
+  }
+  document.getElementById('playBtn').addEventListener('click', ()=>{
+    if (state.playing) stopPlayback(); else startPlayback();
+  });
+  document.getElementById('scrub').addEventListener('input', (e)=>{
+    stopPlayback(); state.t=parseFloat(e.target.value); updateFrame();
+  });
+
+  /* ============================================================
+     INTERACTIONS : glisser les racines
+     ============================================================ */
+  const GRAB_RADIUS_PX = 14;
+  let draggingIdx = -1;
+  function localXY(e,canvas){ const r=canvas.getBoundingClientRect(); return {x:e.clientX-r.left, y:e.clientY-r.top}; }
+
+  rootsCanvas.addEventListener('pointerdown', (e)=>{
+    const toPx = makeToPx(rSize, R_RANGE);
+    const xy = localXY(e, rootsCanvas);
+    let best=-1, bestD=Infinity;
+    for (let i=0;i<state.n;i++){
+      const p = toPx(state.roots[i].re, state.roots[i].im);
+      const d = Math.hypot(xy.x-p.x, xy.y-p.y);
+      if (d<bestD){ bestD=d; best=i; }
+    }
+    if (bestD<=GRAB_RADIUS_PX){
+      draggingIdx = best;
+      rootsCanvas.setPointerCapture(e.pointerId);
+      rootsCanvas.style.cursor='grabbing';
+    }
+  });
+  rootsCanvas.addEventListener('pointermove', (e)=>{
+    if (draggingIdx<0) return;
+    const fromPx = makeFromPx(rSize, R_RANGE);
+    const xy = localXY(e, rootsCanvas);
+    const z = fromPx(xy.x, xy.y);
+    let tooClose=false;
+    for (let i=0;i<state.n;i++){
+      if (i===draggingIdx) continue;
+      if (Math.hypot(z.re-state.roots[i].re, z.im-state.roots[i].im) < 0.25) tooClose=true;
+    }
+    if (!tooClose){
+      state.roots[draggingIdx]=z;
+      recomputeCoefRange();
+      state.built = false;
+      document.getElementById('playBtn').disabled = true;
+      document.getElementById('scrub').disabled = true;
+      setStatus('Racines modifiées — reconstruisez le commutateur.', 'info');
+      redraw();
+    }
+  });
+  function endDrag(e){
+    if (draggingIdx>=0){
+      draggingIdx=-1;
+      rootsCanvas.style.cursor='crosshair';
+      if (e && e.pointerId!==undefined) rootsCanvas.releasePointerCapture(e.pointerId);
+    }
+  }
+  rootsCanvas.addEventListener('pointerup', endDrag);
+  rootsCanvas.addEventListener('pointercancel', endDrag);
+
+  /* ============================================================
+     CONTRÔLES
+     ============================================================ */
+  function setN(newN){
+    newN = Math.max(2, Math.min(6, newN));
+    if (newN===state.n) return;
+    state.n = newN;
+    document.getElementById('nVal').textContent = state.n;
+    document.getElementById('nLabel').textContent = `n = ${state.n}`;
+    document.getElementById('nMinus').disabled = state.n<=2;
+    document.getElementById('nPlus').disabled = state.n>=6;
+    state.roots = defaultRoots(state.n);
+    recomputeCoefRange();
+    state.built = false;
+    document.getElementById('playBtn').disabled = true;
+    document.getElementById('scrub').disabled = true;
+    setStatus("Construisez le commutateur pour l'animer.", 'info');
+    redraw();
+  }
+  document.getElementById('nMinus').addEventListener('click', ()=>setN(state.n-1));
+  document.getElementById('nPlus').addEventListener('click', ()=>setN(state.n+1));
+
+  function invalidateBuild(msg){
+    state.built = false;
+    document.getElementById('playBtn').disabled = true;
+    document.getElementById('scrub').disabled = true;
+    if (msg) setStatus(msg, 'info');
+  }
+
+  function setMode(mode){
+    state.mode = mode;
+    document.getElementById('tabFree').classList.toggle('active', mode==='free');
+    document.getElementById('tabTarget').classList.toggle('active', mode==='target');
+    document.getElementById('freeFields').style.display = mode==='free' ? '' : 'none';
+    document.getElementById('targetFields').style.display = mode==='target' ? '' : 'none';
+    invalidateBuild("Construisez le commutateur pour l'animer.");
+  }
+  document.getElementById('tabFree').addEventListener('click', ()=>setMode('free'));
+  document.getElementById('tabTarget').addEventListener('click', ()=>setMode('target'));
+
+  function setStage(s){
+    s = Math.max(1, Math.min(6, s));
+    if (s===state.stage) return;
+    state.stage = s;
+    document.getElementById('stageVal').textContent = s;
+    document.getElementById('stageLabel').textContent = `étage ${s}`;
+    document.getElementById('stageMinus').disabled = s<=1;
+    document.getElementById('stagePlus').disabled = s>=6;
+    invalidateBuild();
+  }
+  document.getElementById('stageMinus').addEventListener('click', ()=>setStage(state.stage-1));
+  document.getElementById('stagePlus').addEventListener('click', ()=>setStage(state.stage+1));
+  document.getElementById('targetInput').addEventListener('input', ()=>invalidateBuild());
+
+  document.getElementById('resetRoots').addEventListener('click', ()=>{
+    state.roots = defaultRoots(state.n);
+    recomputeCoefRange();
+    state.built=false;
+    document.getElementById('playBtn').disabled = true;
+    document.getElementById('scrub').disabled = true;
+    setStatus('Racines réinitialisées — reconstruisez le commutateur.', 'info');
+    redraw();
+  });
+
+  ['perm1Input','perm2Input'].forEach(id=>{
+    document.getElementById(id).addEventListener('input', ()=>{
+      state.built=false;
+      document.getElementById('playBtn').disabled = true;
+      document.getElementById('scrub').disabled = true;
+    });
+  });
+
+  const buildBtn = document.createElement('button');
+  buildBtn.className='btn primary'; buildBtn.type='button'; buildBtn.textContent='Construire le commutateur';
+  buildBtn.style.marginBottom='10px';
+  document.querySelector('.btnrow').prepend(buildBtn);
+  buildBtn.addEventListener('click', tryBuild);
+
+  /* ============================================================
+     INITIALISATION
+     ============================================================ */
+  function init(){
+    rSize = rootsCanvas.getBoundingClientRect().width || 520;
+    cSize = coefCanvas.getBoundingClientRect().width || 520;
+    eSize = exprCanvas.getBoundingClientRect().width || 520;
+    rCtx = setupDPR(rootsCanvas, rSize);
+    cCtx = setupDPR(coefCanvas, cSize);
+    eCtx = setupDPR(exprCanvas, eSize);
+
+    window.addEventListener('resize', ()=>{
+      const nr=rootsCanvas.getBoundingClientRect().width, nc=coefCanvas.getBoundingClientRect().width, ne=exprCanvas.getBoundingClientRect().width;
+      if (nr && Math.abs(nr-rSize)>2){ rSize=nr; rCtx=setupDPR(rootsCanvas,rSize); redraw(); }
+      if (nc && Math.abs(nc-cSize)>2){ cSize=nc; cCtx=setupDPR(coefCanvas,cSize); redraw(); }
+      if (ne && Math.abs(ne-eSize)>2){ eSize=ne; eCtx=setupDPR(exprCanvas,eSize); redraw(); }
+    });
+
+    state.roots = defaultRoots(state.n);
+    recomputeCoefRange();
+    redraw();
+  }
+
+  init();
+
+})();
+</script>
+</body>
+</html>
